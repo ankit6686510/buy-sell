@@ -186,7 +186,7 @@ const Login = () => {
               
               <Box sx={{ mt: 4, p: 3, bgcolor: alpha(theme.palette.primary.main, 0.05), borderRadius: 3 }}>
                 <Typography variant="body1" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
-                  "BudMatching helped me find my missing AirPod Pro in just 2 days! The process was smooth and secure."
+                  "SecondMarket helped me find my missing AirPod Pro in just 2 days! The process was smooth and secure."
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 1, fontWeight: 600, color: 'primary.main' }}>
                   - Sarah Chen, Verified User

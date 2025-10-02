@@ -226,7 +226,7 @@ const Footer = () => {
                     mb: 2,
                   }}
                 >
-                  BudMatching
+                  SecondMarket
                 </Typography>
                 <Typography variant="body1" color="rgba(255, 255, 255, 0.8)" sx={{ mb: 3, lineHeight: 1.6 }}>
                   The world's first smart platform for finding matching earbuds. Connect with verified users, trade safely, and get your earbuds working again.
@@ -327,7 +327,7 @@ const Footer = () => {
           <Grid container spacing={4} alignItems="center">
             <Grid item xs={12} md={6}>
               <Typography variant="body2" color="rgba(255, 255, 255, 0.7)">
-                © 2025 BudMatching, Inc. All rights reserved.
+                © 2025 SecondMarket, Inc. All rights reserved.
               </Typography>
               <Typography variant="body2" color="rgba(255, 255, 255, 0.7)" sx={{ mt: 1 }}>
                 Made with ❤️ for the global earbud community

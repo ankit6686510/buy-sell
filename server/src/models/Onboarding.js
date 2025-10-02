@@ -357,7 +357,7 @@ export const createDefaultTutorials = async () => {
   const defaultTutorials = [
     {
       tutorialId: 'getting-started',
-      title: 'Welcome to BudMatching!',
+      title: 'Welcome to SecondMarket!',
       description: 'Learn the basics of finding and matching lost earbuds',
       category: 'getting_started',
       difficulty: 'beginner',
@@ -365,8 +365,8 @@ export const createDefaultTutorials = async () => {
       steps: [
         {
           stepNumber: 1,
-          title: 'Welcome to BudMatching',
-          content: 'BudMatching helps you find the missing earbud to complete your pair. Whether you\'ve lost one or found one, we connect you with the right people.',
+          title: 'Welcome to SecondMarket',
+          content: 'SecondMarket helps you find the missing earbud to complete your pair. Whether you\'ve lost one or found one, we connect you with the right people.',
           type: 'text'
         },
         {

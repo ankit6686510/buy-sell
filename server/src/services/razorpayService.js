@@ -137,7 +137,7 @@ class RazorpayService {
           key: process.env.RAZORPAY_KEY_ID,
           amount: order.amount,
           currency: order.currency,
-          name: 'BudMatching',
+          name: 'SecondMarket',
           description: `${packageName} Promotion`,
           order_id: order.id,
           prefill: {
@@ -217,7 +217,7 @@ class RazorpayService {
           key: process.env.RAZORPAY_KEY_ID,
           amount: order.amount,
           currency: order.currency,
-          name: 'BudMatching',
+          name: 'SecondMarket',
           description: description,
           order_id: order.id,
           prefill: {

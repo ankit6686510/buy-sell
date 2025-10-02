@@ -368,7 +368,7 @@ function getNextSteps(onboarding) {
     { step: 'email_verification', title: 'Verify your email', description: 'Confirm your email address for security' },
     { step: 'phone_verification', title: 'Verify your phone', description: 'Add your phone number for better trust' },
     { step: 'first_listing_created', title: 'Create your first listing', description: 'Post a lost or found earbud' },
-    { step: 'tutorial_completed', title: 'Complete a tutorial', description: 'Learn how to use BudMatching effectively' },
+    { step: 'tutorial_completed', title: 'Complete a tutorial', description: 'Learn how to use SecondMarket effectively' },
     { step: 'first_search', title: 'Search for matches', description: 'Look for earbuds that match yours' },
     { step: 'first_message_sent', title: 'Send a message', description: 'Contact someone about a potential match' },
     { step: 'first_rating_given', title: 'Rate a user', description: 'Help build community trust' },

@@ -1,6 +1,6 @@
-# 🎧 BudMatching - Smart Earbud Recovery Platform
+# 🎧 SecondMarket - Smart Earbud Recovery Platform
 
-**BudMatching** is a sophisticated full-stack platform that uses intelligent algorithms to help users find and match lost earbuds. Built with modern technologies and enterprise-level features, it provides a comprehensive solution for earbud recovery with advanced matching, real-time communication, and trust & safety systems.
+**SecondMarket** is a sophisticated full-stack platform that uses intelligent algorithms to help users find and match lost earbuds. Built with modern technologies and enterprise-level features, it provides a comprehensive solution for earbud recovery with advanced matching, real-time communication, and trust & safety systems.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen)](https://nodejs.org/)
@@ -626,8 +626,8 @@ Import this collection for comprehensive API testing:
 ```json
 {
   "info": {
-    "name": "BudMatching API",
-    "description": "Complete API collection for testing BudMatching platform"
+    "name": "SecondMarket API",
+    "description": "Complete API collection for testing SecondMarket platform"
   },
   "variable": [
     {

@@ -171,7 +171,7 @@ const Register = () => {
                   mb: 2,
                 }}
               >
-                Join BudMatching
+                Join SecondMarket
               </Typography>
               
               <Typography variant="h6" color="text.secondary" sx={{ mb: 4, lineHeight: 1.6 }}>
