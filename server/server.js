@@ -200,7 +200,7 @@ const handleCloudinaryUpload = async (file) => {
     
     // Upload to Cloudinary
     cloudinary.uploader.upload(dataURI, {
-      folder: 'budmatching'
+      folder: 'SecondMarket'
     }, (error, result) => {
       if (error) return reject(error);
       resolve(result.secure_url);

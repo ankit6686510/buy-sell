@@ -13,7 +13,7 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'budmatching/earbuds', // Cloudinary folder name
+    folder: 'SecondMarket/earbuds', // Cloudinary folder name
     format: async (req, file) => 'jpg', // supports promises as well
     public_id: (req, file) => {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

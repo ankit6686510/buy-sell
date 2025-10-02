@@ -130,7 +130,7 @@ PORT=5000
 NODE_ENV=development
 
 # Database
-MONGODB_URI=mongodb://localhost:27017/budmatching
+MONGODB_URI=mongodb://localhost:27017/SecondMarket
 
 # Security
 JWT_SECRET=your_super_secure_jwt_secret_key_here_min_64_characters
@@ -173,8 +173,8 @@ VITE_ANALYTICS_ENABLED=true
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/yourusername/budmatching.git
-cd budmatching
+git clone https://github.com/yourusername/SecondMarket.git
+cd SecondMarket
 
 # 2. Install backend dependencies
 cd server
@@ -669,9 +669,9 @@ Import this collection for comprehensive API testing:
 ```env
 NODE_ENV=production
 PORT=443
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/budmatching
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/SecondMarket
 JWT_SECRET=super_secure_production_jwt_secret
-CLIENT_URL=https://budmatching.com
+CLIENT_URL=https://SecondMarket.com
 ```
 
 ### **Docker Deployment**
@@ -821,7 +821,7 @@ brew services list | grep mongodb
 brew services restart mongodb-community
 
 # Check connection string
-mongo "mongodb://localhost:27017/budmatching"
+mongo "mongodb://localhost:27017/SecondMarket"
 ```
 
 #### **Authentication Issues**
@@ -903,10 +903,10 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ## 📞 **Support & Contact**
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/budmatching/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/budmatching/discussions)
-- **Email**: support@budmatching.com
-- **Documentation**: [Wiki](https://github.com/yourusername/budmatching/wiki)
+- **Issues**: [GitHub Issues](https://github.com/yourusername/SecondMarket/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/SecondMarket/discussions)
+- **Email**: support@SecondMarket.com
+- **Documentation**: [Wiki](https://github.com/yourusername/SecondMarket/wiki)
 
 ---
 

@@ -260,7 +260,7 @@ const Footer = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Email sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
                     <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
-                      support@budmatching.com
+                      support@SecondMarket.com
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
