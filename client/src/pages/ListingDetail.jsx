@@ -142,7 +142,7 @@ const ListingDetail = () => {
       const response = await startChat(
         listing.user._id,
         id,
-        `Hi, I'm interested in your ${listing.brand} ${listing.model} earbud.`
+        `Hi, I'm interested in your ${listing.title}.`
       );
       
       dispatch(addChatSuccess(response.chat));
@@ -266,13 +266,30 @@ const ListingDetail = () => {
                   <Box
                     component="img"
                     src={listing.images[currentImageIndex]}
-                    alt={`${listing.brand} ${listing.model}`}
+                    alt={listing.title}
                     sx={{
                       height: '100%',
                       width: '100%',
                       objectFit: 'contain'
                     }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
                   />
+                  <Box
+                    sx={{
+                      height: '100%',
+                      display: 'none',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: 'grey.100'
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      Image not available
+                    </Typography>
+                  </Box>
                   
                   {listing.images.length > 1 && (
                     <>
@@ -383,7 +400,7 @@ const ListingDetail = () => {
           <Grid item xs={12} md={6}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="h4" component="h1" gutterBottom>
-                {listing.brand} {listing.model}
+                {listing.title}
               </Typography>
               
               <IconButton 
@@ -396,20 +413,48 @@ const ListingDetail = () => {
             </Box>
             
             <Typography variant="h5" color="primary" gutterBottom>
-              ${listing.price}
+              ₹{listing.price?.toLocaleString('en-IN')}
+              {listing.originalPrice && listing.originalPrice > listing.price && (
+                <Typography 
+                  component="span" 
+                  variant="body2" 
+                  sx={{ 
+                    ml: 2, 
+                    textDecoration: 'line-through', 
+                    color: 'text.secondary' 
+                  }}
+                >
+                  ₹{listing.originalPrice?.toLocaleString('en-IN')}
+                </Typography>
+              )}
             </Typography>
             
-            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+            <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
               <Chip 
-                label={`${listing.side.charAt(0).toUpperCase() + listing.side.slice(1)} side`} 
+                label={listing.category?.charAt(0).toUpperCase() + listing.category?.slice(1)} 
                 color="primary" 
                 variant="outlined" 
               />
-              <Chip 
-                label={listing.condition.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())} 
-                color="secondary" 
-                variant="outlined" 
-              />
+              {listing.subcategory && (
+                <Chip 
+                  label={listing.subcategory?.charAt(0).toUpperCase() + listing.subcategory?.slice(1)} 
+                  color="secondary" 
+                  variant="outlined" 
+                />
+              )}
+              {listing.condition && (
+                <Chip 
+                  label={listing.condition.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())} 
+                  color="info" 
+                  variant="outlined" 
+                />
+              )}
+              {listing.brand && (
+                <Chip 
+                  label={listing.brand} 
+                  variant="outlined" 
+                />
+              )}
             </Box>
             
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>

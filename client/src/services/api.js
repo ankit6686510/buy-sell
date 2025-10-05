@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use proxy for development, direct URL for production
-const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || 'http://localhost:5001');
+const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || 'http://localhost:5000');
 
 console.log('API base URL:', API_BASE_URL);
 

@@ -113,10 +113,125 @@ const productListingSchema = new mongoose.Schema({
       default: false
     }
   },
+  // B2B Enhancement: Enhanced specifications for electronics
   specifications: {
     type: Map,
     of: String,
     default: {}
+  },
+  
+  // B2B Enhancement: Minimum Order Quantity and Bulk Pricing
+  moq: {
+    type: Number,
+    default: 1,
+    min: 1
+  },
+  moqUnit: {
+    type: String,
+    enum: ['pieces', 'kg', 'boxes', 'meters', 'liters', 'sets', 'cartons'],
+    default: 'pieces'
+  },
+  bulkPricing: [{
+    minQuantity: {
+      type: Number,
+      required: true,
+      min: 1
+    },
+    maxQuantity: {
+      type: Number,
+      required: true
+    },
+    pricePerUnit: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    discount: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100
+    }
+  }],
+  
+  // B2B Enhancement: Product variants (color, size, voltage, etc.)
+  variants: [{
+    name: {
+      type: String,
+      required: true
+    },
+    options: [{
+      type: String,
+      required: true
+    }],
+    priceModifier: {
+      type: Number,
+      default: 0
+    }
+  }],
+  
+  // B2B Enhancement: Extended image gallery
+  imageGallery: [{
+    url: {
+      type: String,
+      required: true
+    },
+    caption: String,
+    isPrimary: {
+      type: Boolean,
+      default: false
+    }
+  }],
+  
+  // B2B Enhancement: Technical documents
+  technicalDocs: [{
+    name: {
+      type: String,
+      required: true
+    },
+    url: {
+      type: String,
+      required: true
+    },
+    type: {
+      type: String,
+      enum: ['datasheet', 'manual', 'certificate', 'warranty', 'other'],
+      default: 'other'
+    },
+    size: Number, // in bytes
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  
+  // B2B Enhancement: Electronics-specific fields
+  electronicsSpecs: {
+    voltage: String,
+    wattage: String,
+    frequency: String,
+    warranty: String,
+    certifications: [{
+      type: String,
+      enum: ['CE', 'ISI', 'BIS', 'FCC', 'RoHS', 'ISO', 'UL', 'other']
+    }],
+    connectorType: String,
+    inputOutput: String,
+    operatingTemp: String,
+    dimensions: String,
+    weight: String
+  },
+  
+  // B2B Enhancement: Business account type
+  isB2B: {
+    type: Boolean,
+    default: false
+  },
+  
+  // B2B Enhancement: Company listing (if posted by business)
+  company: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Company'
   },
   tags: [{
     type: String,
@@ -219,6 +334,15 @@ productListingSchema.index({ featured: -1, priority: -1, createdAt: -1 });
 productListingSchema.index({ boost: -1, createdAt: -1 });
 productListingSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 productListingSchema.index({ title: 'text', description: 'text', brand: 'text', tags: 'text' });
+
+// B2B Enhancement: Additional indexes for business features
+productListingSchema.index({ isB2B: 1, category: 1, status: 1 });
+productListingSchema.index({ company: 1, status: 1 });
+productListingSchema.index({ moq: 1, status: 1 });
+productListingSchema.index({ 'bulkPricing.minQuantity': 1 });
+productListingSchema.index({ 'electronicsSpecs.voltage': 1 });
+productListingSchema.index({ 'electronicsSpecs.certifications': 1 });
+productListingSchema.index({ isB2B: 1, 'location.city': 1, status: 1 });
 
 // Virtual for condition priority
 productListingSchema.virtual('conditionPriority').get(function() {

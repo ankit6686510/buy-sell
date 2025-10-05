@@ -19,6 +19,11 @@ const userSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  accountType: {
+    type: String,
+    enum: ['individual', 'business'],
+    default: 'individual'
+  },
   address: {
     type: String,
     trim: true
