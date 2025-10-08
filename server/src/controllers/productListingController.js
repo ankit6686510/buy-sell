@@ -116,6 +116,7 @@ export const getListings = async (req, res) => {
   try {
     const {
       category,
+      categories,
       subcategory,
       brand,
       model,
@@ -135,7 +136,9 @@ export const getListings = async (req, res) => {
       limit = 20,
       user,
       featured,
-      negotiable
+      negotiable,
+      startDate,
+      endDate
     } = req.query;
 
     const query = {};
@@ -156,8 +159,16 @@ export const getListings = async (req, res) => {
       query.user = user;
     }
     
-    // Category-based filters
-    if (category) query.category = category;
+    // Category-based filters - support both single category and multiple categories
+    if (categories) {
+      const categoryList = Array.isArray(categories) ? categories : categories.split(',');
+      if (categoryList.length > 0) {
+        query.category = { $in: categoryList };
+      }
+    } else if (category) {
+      query.category = category;
+    }
+    
     if (subcategory) query.subcategory = subcategory;
     
     // Product-specific filters
@@ -189,6 +200,20 @@ export const getListings = async (req, res) => {
     // Negotiable filter
     if (negotiable === 'true') {
       query['preferences.negotiable'] = true;
+    }
+
+    // Date range filter
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) {
+        query.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        // Add 1 day to endDate to include the entire end date
+        const endDateTime = new Date(endDate);
+        endDateTime.setDate(endDateTime.getDate() + 1);
+        query.createdAt.$lt = endDateTime;
+      }
     }
 
     // Location-based search
@@ -320,10 +345,11 @@ export const getListings = async (req, res) => {
       },
       filters: {
         appliedFilters: {
-          category, subcategory, brand, model, condition, color, size,
-          minPrice, maxPrice, location, search, radius, featured, negotiable
+          category, categories, subcategory, brand, model, condition, color, size,
+          minPrice, maxPrice, location, search, radius, featured, negotiable,
+          startDate, endDate
         },
-        availableFilters: await getAvailableFilters(category)
+        availableFilters: await getAvailableFilters(categories || category)
       }
     });
   } catch (error) {
@@ -332,11 +358,18 @@ export const getListings = async (req, res) => {
 };
 
 // Helper function to get available filter options
-async function getAvailableFilters(category = null) {
+async function getAvailableFilters(categories = null) {
   try {
     const baseQuery = { status: 'available', isActive: true };
-    if (category) {
-      baseQuery.category = category;
+    if (categories) {
+      if (Array.isArray(categories)) {
+        baseQuery.category = { $in: categories };
+      } else if (typeof categories === 'string') {
+        const categoryList = categories.includes(',') ? categories.split(',') : [categories];
+        baseQuery.category = categoryList.length > 1 ? { $in: categoryList } : categoryList[0];
+      } else {
+        baseQuery.category = categories;
+      }
     }
 
     const [categories, subcategories, brands, models, colors, conditions] = await Promise.all([

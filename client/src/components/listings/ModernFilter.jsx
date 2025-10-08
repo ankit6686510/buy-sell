@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   TextField,
@@ -12,6 +12,11 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Autocomplete,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  OutlinedInput,
 } from '@mui/material';
 import {
   Search,
@@ -21,7 +26,12 @@ import {
   ViewModule,
   ViewList,
   Sort,
+  LocationOn,
+  DateRange,
 } from '@mui/icons-material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 const brandOptions = ['Apple', 'Samsung', 'Sony', 'Nike', 'Adidas', 'HP', 'Dell', 'Canon', 'LG', 'Xiaomi', 'OnePlus', 'Realme'];
 
@@ -35,6 +45,12 @@ const categoryOptions = [
   { value: 'toys_games', label: 'Toys & Games' },
   { value: 'health_beauty', label: 'Health & Beauty' },
   { value: 'others', label: 'Others' }
+];
+
+const locationOptions = [
+  'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata', 
+  'Pune', 'Ahmedabad', 'Jaipur', 'Surat', 'Lucknow', 'Kanpur',
+  'Nagpur', 'Indore', 'Thane', 'Bhopal', 'Visakhapatnam', 'Pimpri-Chinchwad'
 ];
 
 const conditionOptions = [
@@ -66,6 +82,60 @@ const ModernFilter = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchValue, setSearchValue] = useState(filters.search || '');
   const [priceRange, setPriceRange] = useState([filters.minPrice || 0, filters.maxPrice || 50000]);
+  const [selectedCategories, setSelectedCategories] = useState(filters.categories || []);
+  const [startDate, setStartDate] = useState(filters.startDate ? new Date(filters.startDate) : null);
+  const [endDate, setEndDate] = useState(filters.endDate ? new Date(filters.endDate) : null);
+  const [selectedLocation, setSelectedLocation] = useState(filters.location || '');
+
+  // URL persistence
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    
+    // Load filters from URL
+    const urlFilters = {
+      search: params.get('search') || '',
+      categories: params.get('categories') ? params.get('categories').split(',') : [],
+      condition: params.get('condition') ? params.get('condition').split(',') : [],
+      minPrice: params.get('minPrice') ? Number(params.get('minPrice')) : 0,
+      maxPrice: params.get('maxPrice') ? Number(params.get('maxPrice')) : 50000,
+      location: params.get('location') || '',
+      startDate: params.get('startDate') || null,
+      endDate: params.get('endDate') || null,
+      brand: params.get('brand') || '',
+      sortBy: params.get('sortBy') || 'newest'
+    };
+
+    // Update state with URL filters
+    setSearchValue(urlFilters.search);
+    setSelectedCategories(urlFilters.categories);
+    setPriceRange([urlFilters.minPrice, urlFilters.maxPrice]);
+    setSelectedLocation(urlFilters.location);
+    setStartDate(urlFilters.startDate ? new Date(urlFilters.startDate) : null);
+    setEndDate(urlFilters.endDate ? new Date(urlFilters.endDate) : null);
+
+    // Apply filters if they exist in URL
+    if (Object.values(urlFilters).some(v => v && (Array.isArray(v) ? v.length > 0 : true))) {
+      onFiltersChange(urlFilters);
+    }
+  }, []);
+
+  // Update URL when filters change
+  const updateURL = (newFilters) => {
+    const params = new URLSearchParams();
+    
+    Object.entries(newFilters).forEach(([key, value]) => {
+      if (value && (Array.isArray(value) ? value.length > 0 : true)) {
+        if (Array.isArray(value)) {
+          params.set(key, value.join(','));
+        } else {
+          params.set(key, value.toString());
+        }
+      }
+    });
+
+    const newURL = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+    window.history.replaceState({}, '', newURL);
+  };
 
   const handleSearchChange = (event) => {
     const value = event.target.value;
@@ -79,30 +149,68 @@ const ModernFilter = ({
       ? currentConditions.filter(c => c !== condition)
       : [...currentConditions, condition];
     
-    onFiltersChange({ ...filters, condition: newConditions });
+    const newFilters = { ...filters, condition: newConditions };
+    onFiltersChange(newFilters);
+    updateURL(newFilters);
   };
 
-  const handleCategoryToggle = (category) => {
-    onFiltersChange({ 
-      ...filters, 
-      category: filters.category === category ? '' : category 
-    });
+  const handleCategoryChange = (event) => {
+    const value = event.target.value;
+    const newCategories = typeof value === 'string' ? value.split(',') : value;
+    setSelectedCategories(newCategories);
+    
+    const newFilters = { ...filters, categories: newCategories };
+    onFiltersChange(newFilters);
+    updateURL(newFilters);
+  };
+
+  const handleLocationChange = (event, newValue) => {
+    setSelectedLocation(newValue || '');
+    const newFilters = { ...filters, location: newValue || '' };
+    onFiltersChange(newFilters);
+    updateURL(newFilters);
+  };
+
+  const handleDateChange = (type, date) => {
+    if (type === 'start') {
+      setStartDate(date);
+      const newFilters = { ...filters, startDate: date ? date.toISOString() : null };
+      onFiltersChange(newFilters);
+      updateURL(newFilters);
+    } else {
+      setEndDate(date);
+      const newFilters = { ...filters, endDate: date ? date.toISOString() : null };
+      onFiltersChange(newFilters);
+      updateURL(newFilters);
+    }
   };
 
   const handlePriceChange = (event, newValue) => {
     setPriceRange(newValue);
-    onFiltersChange({ 
+    const newFilters = { 
       ...filters, 
       minPrice: newValue[0], 
       maxPrice: newValue[1] 
-    });
+    };
+    onFiltersChange(newFilters);
+    updateURL(newFilters);
   };
 
   const handleClearFilters = () => {
     setSearchValue('');
     setPriceRange([0, 50000]);
-    onFiltersChange({});
+    setSelectedCategories([]);
+    setSelectedLocation('');
+    setStartDate(null);
+    setEndDate(null);
+    
+    const clearedFilters = {};
+    onFiltersChange(clearedFilters);
     onSearch('');
+    updateURL(clearedFilters);
+    
+    // Clear URL
+    window.history.replaceState({}, '', window.location.pathname);
   };
 
   const activeFiltersCount = Object.values(filters).filter(v => 
@@ -240,15 +348,23 @@ const ModernFilter = ({
           <Chip
             key={category.value}
             label={category.label}
-            onClick={() => handleCategoryToggle(category.value)}
-            variant={filters.category === category.value ? 'filled' : 'outlined'}
+            onClick={() => {
+              const newCategories = selectedCategories.includes(category.value)
+                ? selectedCategories.filter(c => c !== category.value)
+                : [...selectedCategories, category.value];
+              setSelectedCategories(newCategories);
+              const newFilters = { ...filters, categories: newCategories };
+              onFiltersChange(newFilters);
+              updateURL(newFilters);
+            }}
+            variant={selectedCategories.includes(category.value) ? 'filled' : 'outlined'}
             sx={{
-              background: filters.category === category.value 
+              background: selectedCategories.includes(category.value) 
                 ? 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)' 
                 : 'transparent',
-              color: filters.category === category.value ? 'white' : 'inherit',
+              color: selectedCategories.includes(category.value) ? 'white' : 'inherit',
               '&:hover': {
-                background: filters.category === category.value 
+                background: selectedCategories.includes(category.value) 
                   ? 'linear-gradient(135deg, #4338ca 0%, #3730a3 100%)' 
                   : 'rgba(99, 102, 241, 0.1)',
               },
@@ -286,48 +402,65 @@ const ModernFilter = ({
           </Typography>
 
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-            {/* Category Filter */}
+            {/* Multi-Select Category Filter */}
             <Box>
               <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                Category
+                Categories
               </Typography>
-              <Autocomplete
-                options={categoryOptions}
-                getOptionLabel={(option) => option.label}
-                value={categoryOptions.find(c => c.value === filters.category) || null}
-                onChange={(event, newValue) => 
-                  onFiltersChange({ ...filters, category: newValue?.value || '' })
-                }
-                renderInput={(params) => (
-                  <TextField 
-                    {...params} 
-                    placeholder="Select category"
-                    size="small"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '12px',
-                      },
-                    }}
-                  />
-                )}
-              />
+              <FormControl fullWidth size="small">
+                <Select
+                  multiple
+                  value={selectedCategories}
+                  onChange={handleCategoryChange}
+                  input={<OutlinedInput />}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((value) => {
+                        const category = categoryOptions.find(c => c.value === value);
+                        return (
+                          <Chip 
+                            key={value} 
+                            label={category?.label || value} 
+                            size="small"
+                            sx={{
+                              background: 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)',
+                              color: 'white',
+                              height: '20px',
+                              fontSize: '0.75rem'
+                            }}
+                          />
+                        );
+                      })}
+                    </Box>
+                  )}
+                  sx={{
+                    borderRadius: '12px',
+                  }}
+                >
+                  {categoryOptions.map((category) => (
+                    <MenuItem key={category.value} value={category.value}>
+                      {category.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Box>
 
-            {/* Brand Filter */}
+            {/* Location Filter */}
             <Box>
               <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-                Brand
+                <LocationOn sx={{ fontSize: '1rem', mr: 0.5, verticalAlign: 'middle' }} />
+                Location
               </Typography>
               <Autocomplete
-                options={brandOptions}
-                value={filters.brand || null}
-                onChange={(event, newValue) => 
-                  onFiltersChange({ ...filters, brand: newValue })
-                }
+                options={locationOptions}
+                value={selectedLocation}
+                onChange={handleLocationChange}
+                freeSolo
                 renderInput={(params) => (
                   <TextField 
                     {...params} 
-                    placeholder="Select brand"
+                    placeholder="Enter or select location"
                     size="small"
                     sx={{
                       '& .MuiOutlinedInput-root': {
@@ -338,6 +471,77 @@ const ModernFilter = ({
                 )}
               />
             </Box>
+          </Box>
+
+          {/* Date Range Filter */}
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="body2" sx={{ mb: 2, fontWeight: 500 }}>
+                <DateRange sx={{ fontSize: '1rem', mr: 0.5, verticalAlign: 'middle' }} />
+                Date Range
+              </Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+                <DatePicker
+                  label="Start Date"
+                  value={startDate}
+                  onChange={(date) => handleDateChange('start', date)}
+                  slotProps={{
+                    textField: {
+                      size: 'small',
+                      sx: {
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '12px',
+                        },
+                      }
+                    }
+                  }}
+                />
+                <DatePicker
+                  label="End Date"
+                  value={endDate}
+                  onChange={(date) => handleDateChange('end', date)}
+                  minDate={startDate}
+                  slotProps={{
+                    textField: {
+                      size: 'small',
+                      sx: {
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: '12px',
+                        },
+                      }
+                    }
+                  }}
+                />
+              </Box>
+            </Box>
+          </LocalizationProvider>
+
+          {/* Brand Filter */}
+          <Box sx={{ mt: 3 }}>
+            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+              Brand
+            </Typography>
+            <Autocomplete
+              options={brandOptions}
+              value={filters.brand || null}
+              onChange={(event, newValue) => {
+                const newFilters = { ...filters, brand: newValue || '' };
+                onFiltersChange(newFilters);
+                updateURL(newFilters);
+              }}
+              renderInput={(params) => (
+                <TextField 
+                  {...params} 
+                  placeholder="Select brand"
+                  size="small"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '12px',
+                    },
+                  }}
+                />
+              )}
+            />
           </Box>
 
           {/* Price Range */}
@@ -401,7 +605,11 @@ const ModernFilter = ({
               options={sortOptions}
               getOptionLabel={(option) => option.label}
               value={sortOptions.find(s => s.value === filters.sortBy) || sortOptions[0]}
-              onChange={(event, newValue) => onSort(newValue?.value)}
+              onChange={(event, newValue) => {
+                onSort(newValue?.value);
+                const newFilters = { ...filters, sortBy: newValue?.value };
+                updateURL(newFilters);
+              }}
               renderInput={(params) => (
                 <TextField 
                   {...params} 
