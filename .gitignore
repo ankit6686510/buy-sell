@@ -40,8 +40,8 @@ coverage/
 Thumbs.db
 
 # package files
-package-lock.json
-package.json
+
+
 */package-lock.json
 yarn.lock
 */yarn.lock
