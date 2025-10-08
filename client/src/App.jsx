@@ -15,6 +15,9 @@ import Listings from './pages/Listings';
 import Messages from './pages/Messages';
 import NotFound from './pages/NotFound';
 import PasswordReset from './pages/PasswordReset';
+import Analytics from './pages/Analytics';
+import Wallet from './pages/Wallet';
+import CompanyDashboard from './pages/CompanyDashboard';
 import { checkAuth } from './services/authService';
 import { login, logout } from './store/slices/authSlice';
 import theme from './theme';
@@ -111,6 +114,12 @@ const App = () => {
             <Route path="/listings/edit/:id" element={<ProtectedRoute><EditListing /></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
             <Route path="/messages/:chatId" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+            
+            {/* Business & Analytics routes */}
+            <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+            <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
+            <Route path="/company" element={<ProtectedRoute><CompanyDashboard /></ProtectedRoute>} />
+            <Route path="/company-dashboard" element={<Navigate to="/company" replace />} />
             
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />

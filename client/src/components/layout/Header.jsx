@@ -34,6 +34,9 @@ import MessageIcon from '@mui/icons-material/Message';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import HomeIcon from '@mui/icons-material/Home';
 import ListIcon from '@mui/icons-material/List';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import BusinessIcon from '@mui/icons-material/Business';
 
 import { logout } from '../../store/slices/authSlice';
 import GradientButton from '../modern/GradientButton';
@@ -93,6 +96,12 @@ const Header = () => {
   const privatePages = [
     { title: 'Create Listing', path: '/create-listing', icon: AddCircleOutlineIcon },
     { title: 'Messages', path: '/messages', icon: MessageIcon, badge: unreadCount },
+  ];
+
+  const businessPages = [
+    { title: 'Analytics', path: '/analytics', icon: AnalyticsIcon },
+    { title: 'Wallet', path: '/wallet', icon: AccountBalanceWalletIcon },
+    { title: 'Company', path: '/company', icon: BusinessIcon },
   ];
   
   const settings = [
@@ -200,6 +209,16 @@ const Header = () => {
           <>
             <Divider sx={{ my: 2, bgcolor: alpha(theme.palette.common.white, 0.1) }} />
             {privatePages.map((page) => (
+              <ListItem key={page.title} disablePadding sx={{ mb: 1 }}>
+                <NavButton page={page} mobile />
+              </ListItem>
+            ))}
+            
+            <Divider sx={{ my: 2, bgcolor: alpha(theme.palette.common.white, 0.1) }} />
+            <Typography variant="caption" sx={{ px: 3, py: 1, color: alpha(theme.palette.common.white, 0.7) }}>
+              Business Tools
+            </Typography>
+            {businessPages.map((page) => (
               <ListItem key={page.title} disablePadding sx={{ mb: 1 }}>
                 <NavButton page={page} mobile />
               </ListItem>
@@ -345,6 +364,9 @@ const Header = () => {
                 <NavButton key={page.title} page={page} />
               ))}
               {isAuthenticated && privatePages.map((page) => (
+                <NavButton key={page.title} page={page} />
+              ))}
+              {isAuthenticated && businessPages.map((page) => (
                 <NavButton key={page.title} page={page} />
               ))}
             </Box>
