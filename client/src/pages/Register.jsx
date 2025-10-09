@@ -36,7 +36,8 @@ import {
   CheckCircle,
   Security,
   Group,
-  Verified
+  Verified,
+  ErrorOutline
 } from '@mui/icons-material';
 import { IconButton } from '@mui/material';
 
@@ -47,16 +48,13 @@ import GradientButton from '../components/modern/GradientButton';
 import { gradients, animations } from '../theme';
 
 const validationSchema = Yup.object({
-  name: Yup.string().required('Name is required'),
-  email: Yup.string().email('Enter a valid email').required('Email is required'),
-  password: Yup.string()
-    .min(6, 'Password must be at least 6 characters')
-    .required('Password is required'),
-  confirmPassword: Yup.string()
-    .oneOf([Yup.ref('password'), null], 'Passwords must match')
-    .required('Confirm password is required'),
-  location: Yup.string().required('Location is required'),
-  agreeToTerms: Yup.boolean().oneOf([true], 'You must agree to the terms and conditions'),
+  name: Yup.string().required('Please enter your full name to continue'),
+  email: Yup.string().email('That doesn’t look like a valid email address').required('We need your email to verify your account'),
+  password: Yup.string().min(6, 'Your password must have at least 6 characters').required('Please create a password'),
+  confirmPassword: Yup.string().oneOf([Yup.ref('password'), null], 'Passwords do not match').required('Please confirm your password'),
+  location: Yup.string().required('Please enter your city or district'),
+  agreeToTerms: Yup.boolean().oneOf([true], 'Please accept our terms to create an account'),
+
 });
 
 const Register = () => {
@@ -70,7 +68,7 @@ const Register = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
+
   // Get redirect path from location state or default to home
   const from = location.state?.from?.pathname || "/";
 
@@ -83,7 +81,7 @@ const Register = () => {
       dispatch(login(data));
       setSnackbarMessage('Account created successfully!');
       setShowSnackbar(true);
-      
+
       // Short delay before navigation for better UX
       setTimeout(() => {
         navigate(from, { replace: true });
@@ -173,18 +171,18 @@ const Register = () => {
               >
                 Join SecondMarket
               </Typography>
-              
+
               <Typography variant="h6" color="text.secondary" sx={{ mb: 4, lineHeight: 1.6 }}>
                 Create your account and start connecting with verified users to find your perfect earbud match today.
               </Typography>
-              
+
               <Stack spacing={3} sx={{ mb: 4 }}>
                 {benefits.map((benefit, index) => (
-                  <Box 
-                    key={index} 
-                    sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                  <Box
+                    key={index}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
                       gap: 2,
                       animation: animations.slideInUp,
                       animationDelay: `${0.2 + (index * 0.1)}s`,
@@ -217,10 +215,10 @@ const Register = () => {
                 </Typography>
                 <Stack spacing={1}>
                   {features.map((feature, index) => (
-                    <Typography 
-                      key={index} 
-                      variant="body1" 
-                      sx={{ 
+                    <Typography
+                      key={index}
+                      variant="body1"
+                      sx={{
                         color: 'text.secondary',
                         animation: animations.slideInUp,
                         animationDelay: `${0.4 + (index * 0.05)}s`,
@@ -232,7 +230,7 @@ const Register = () => {
                   ))}
                 </Stack>
               </Box>
-              
+
               <Box sx={{ p: 3, bgcolor: alpha(theme.palette.secondary.main, 0.05), borderRadius: 3 }}>
                 <Typography variant="body1" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
                   "Signing up was quick and easy. Found my match within 3 days!"
@@ -310,10 +308,13 @@ const Register = () => {
               </Box>
 
               {registerError && (
-                <Alert 
-                  severity="error" 
-                  sx={{ 
-                    width: '100%', 
+                <Alert
+                  role='alert'
+                  aria-label='registration error'
+                  aria-live='assertive'
+                  severity="error"
+                  sx={{
+                    width: '100%',
                     mb: 3,
                     borderRadius: 2,
                     animation: animations.slideInUp
@@ -347,7 +348,17 @@ const Register = () => {
                         name="name"
                         autoComplete="name"
                         error={touched.name && Boolean(errors.name)}
-                        helperText={touched.name && errors.name}
+                        helperText={
+                          touched.name && errors.name && (
+                            <Box display="flex" alignItems="center" gap={0.5}>
+                              <ErrorOutline color="error" fontSize="small" />
+                              <Typography variant="caption" color="error" role="alert" aria-live="assertive">
+                                {errors.name}
+                              </Typography>
+                            </Box>
+
+                          )
+                        }
                         InputProps={{
                           startAdornment: (
                             <Person sx={{ color: 'text.secondary', mr: 1, ml: 1 }} />
@@ -369,7 +380,7 @@ const Register = () => {
                           },
                         }}
                       />
-                      
+
                       <Field
                         as={TextField}
                         variant="outlined"
@@ -379,7 +390,17 @@ const Register = () => {
                         name="email"
                         autoComplete="email"
                         error={touched.email && Boolean(errors.email)}
-                        helperText={touched.email && errors.email}
+                        helperText={
+                          touched.email && errors.email && (
+                            <Box display="flex" alignItems="center" gap={0.5}>
+                              <ErrorOutline color="error" fontSize="small" />
+                              <Typography variant="caption" color="error" role="alert" aria-live="assertive">
+                                {errors.email}
+                              </Typography>
+                            </Box>
+                          )
+                        }
+
                         InputProps={{
                           startAdornment: (
                             <Email sx={{ color: 'text.secondary', mr: 1, ml: 1 }} />
@@ -411,7 +432,14 @@ const Register = () => {
                         name="location"
                         autoComplete="address-level2"
                         error={touched.location && Boolean(errors.location)}
-                        helperText={touched.location && errors.location}
+                        helperText={touched.location && errors.location && (
+                          <Box display="flex" alignItems="center" gap={0.5}>
+                            <ErrorOutline color="error" fontSize="small" />
+                            <Typography variant="caption" color="error" role="alert" aria-live="assertive">
+                              {errors.location}
+                            </Typography>
+                          </Box>
+                        )}
                         InputProps={{
                           startAdornment: (
                             <LocationOn sx={{ color: 'text.secondary', mr: 1, ml: 1 }} />
@@ -433,7 +461,7 @@ const Register = () => {
                           },
                         }}
                       />
-                      
+
                       <Field
                         as={TextField}
                         variant="outlined"
@@ -444,7 +472,14 @@ const Register = () => {
                         id="password"
                         autoComplete="new-password"
                         error={touched.password && Boolean(errors.password)}
-                        helperText={touched.password && errors.password}
+                        helperText={touched.password && errors.password && (
+                          <Box display="flex" alignItems="center" gap={0.5}>
+                            <ErrorOutline color="error" fontSize="small" />
+                            <Typography variant="caption" color="error" role="alert" aria-live="assertive">
+                              {errors.password}
+                            </Typography>
+                          </Box>
+                        )}
                         InputProps={{
                           startAdornment: (
                             <Lock sx={{ color: 'text.secondary', mr: 1, ml: 1 }} />
@@ -454,6 +489,7 @@ const Register = () => {
                               onClick={togglePasswordVisibility}
                               edge="end"
                               sx={{ mr: 1 }}
+                              aria-label={showPassword ? 'Hide password' : 'Show password'}
                             >
                               {showPassword ? <VisibilityOff /> : <Visibility />}
                             </IconButton>
@@ -475,7 +511,7 @@ const Register = () => {
                           },
                         }}
                       />
-                      
+
                       <Field
                         as={TextField}
                         variant="outlined"
@@ -485,7 +521,14 @@ const Register = () => {
                         type={showConfirmPassword ? 'text' : 'password'}
                         id="confirmPassword"
                         error={touched.confirmPassword && Boolean(errors.confirmPassword)}
-                        helperText={touched.confirmPassword && errors.confirmPassword}
+                        helperText={touched.confirmPassword && errors.confirmPassword && (
+                          <Box display="flex" alignItems="center" gap={0.5}>
+                            <ErrorOutline color="error" fontSize="small" />
+                            <Typography variant="caption" color="error" role="alert" aria-live="assertive">
+                              {errors.confirmPassword}
+                            </Typography>
+                          </Box>
+                        )}
                         InputProps={{
                           startAdornment: (
                             <Lock sx={{ color: 'text.secondary', mr: 1, ml: 1 }} />
@@ -495,6 +538,7 @@ const Register = () => {
                               onClick={toggleConfirmPasswordVisibility}
                               edge="end"
                               sx={{ mr: 1 }}
+                              aria-label={showPassword ? 'Hide password' : 'Show password'}
                             >
                               {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                             </IconButton>
@@ -541,7 +585,7 @@ const Register = () => {
                       }
                       sx={{ mt: 2, alignItems: 'flex-start' }}
                     />
-                    
+
                     {touched.agreeToTerms && errors.agreeToTerms && (
                       <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
                         {errors.agreeToTerms}
@@ -565,9 +609,9 @@ const Register = () => {
               <Box sx={{ textAlign: 'center', mt: 4 }}>
                 <Typography variant="body2" color="text.secondary">
                   Already have an account?{' '}
-                  <Link 
-                    component={RouterLink} 
-                    to="/login" 
+                  <Link
+                    component={RouterLink}
+                    to="/login"
                     sx={{
                       color: 'primary.main',
                       textDecoration: 'none',
@@ -585,16 +629,16 @@ const Register = () => {
           </Grid>
         </Grid>
       </Container>
-      
+
       <Snackbar
         open={showSnackbar}
         autoHideDuration={3000}
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert 
-          onClose={handleSnackbarClose} 
-          severity="success" 
+        <Alert
+          onClose={handleSnackbarClose}
+          severity="success"
           sx={{ width: '100%', borderRadius: 2 }}
         >
           {snackbarMessage}
