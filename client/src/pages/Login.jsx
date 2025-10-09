@@ -31,7 +31,8 @@ import {
   Apple,
   CheckCircle,
   Security,
-  Speed
+  Speed,
+  ErrorOutline
 } from '@mui/icons-material';
 import { IconButton } from '@mui/material';
 
@@ -42,8 +43,11 @@ import GradientButton from '../components/modern/GradientButton';
 import { gradients, animations } from '../theme';
 
 const validationSchema = Yup.object({
-  email: Yup.string().email('Enter a valid email').required('Email is required'),
-  password: Yup.string().required('Password is required'),
+  email: Yup.string()
+    .email('Enter a valid email address, e.g., user@example.com')
+    .required('Email is required to log in'),
+  password: Yup.string()
+    .required('Enter your account password'),
 });
 
 const Login = () => {
@@ -56,20 +60,20 @@ const Login = () => {
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // Get redirect path from location state or default to home
   const from = location.state?.from?.pathname || "/";
 
   const handleSubmit = async (values, { setSubmitting }) => {
     setLoginError(null);
-    
+
     try {
       dispatch(loginStart());
       const data = await loginService(values);
       dispatch(login(data));
       setSnackbarMessage('Login successful!');
       setShowSnackbar(true);
-      
+
       // Short delay before navigation for better UX
       setTimeout(() => {
         navigate(from, { replace: true });
@@ -146,18 +150,18 @@ const Login = () => {
               >
                 Welcome Back!
               </Typography>
-              
+
               <Typography variant="h6" color="text.secondary" sx={{ mb: 4, lineHeight: 1.6 }}>
                 Sign in to your account and continue your earbud matching journey with thousands of verified users.
               </Typography>
-              
+
               <Stack spacing={3}>
                 {benefits.map((benefit, index) => (
-                  <Box 
-                    key={index} 
-                    sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                  <Box
+                    key={index}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
                       gap: 2,
                       animation: animations.slideInUp,
                       animationDelay: `${0.2 + (index * 0.1)}s`,
@@ -183,7 +187,7 @@ const Login = () => {
                   </Box>
                 ))}
               </Stack>
-              
+
               <Box sx={{ mt: 4, p: 3, bgcolor: alpha(theme.palette.primary.main, 0.05), borderRadius: 3 }}>
                 <Typography variant="body1" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
                   "SecondMarket helped me find my missing AirPod Pro in just 2 days! The process was smooth and secure."
@@ -261,10 +265,10 @@ const Login = () => {
               </Box>
 
               {loginError && (
-                <Alert 
-                  severity="error" 
-                  sx={{ 
-                    width: '100%', 
+                <Alert
+                  severity="error"
+                  sx={{
+                    width: '100%',
                     mb: 3,
                     borderRadius: 2,
                     animation: animations.slideInUp
@@ -289,9 +293,17 @@ const Login = () => {
                         id="email"
                         label="Email Address"
                         name="email"
+                        aria-label="Email address field"
                         autoComplete="email"
                         error={touched.email && Boolean(errors.email)}
-                        helperText={touched.email && errors.email}
+                        helperText={touched.email && errors.email && (
+                          <Box display="flex" alignItems="center" gap={0.5}>
+                            <ErrorOutline color="error" fontSize="small" />
+                            <Typography variant="caption" color="error" role="alert" aria-live="assertive">
+                              {errors.email}
+                            </Typography>
+                          </Box>
+                        )}
                         InputProps={{
                           startAdornment: (
                             <Email sx={{ color: 'text.secondary', mr: 1, ml: 1 }} />
@@ -313,7 +325,7 @@ const Login = () => {
                           },
                         }}
                       />
-                      
+
                       <Field
                         as={TextField}
                         variant="outlined"
@@ -322,9 +334,17 @@ const Login = () => {
                         label="Password"
                         type={showPassword ? 'text' : 'password'}
                         id="password"
+                        aria-label="Password field"
                         autoComplete="current-password"
                         error={touched.password && Boolean(errors.password)}
-                        helperText={touched.password && errors.password}
+                        helperText={touched.password && errors.password && (
+                          <Box display="flex" alignItems="center" gap={0.5}>
+                            <ErrorOutline color="error" fontSize="small" />
+                            <Typography variant="caption" color="error" role="alert" aria-live="assertive">
+                              {errors.password}
+                            </Typography>
+                          </Box>
+                        )}
                         InputProps={{
                           startAdornment: (
                             <Lock sx={{ color: 'text.secondary', mr: 1, ml: 1 }} />
@@ -334,6 +354,7 @@ const Login = () => {
                               onClick={togglePasswordVisibility}
                               edge="end"
                               sx={{ mr: 1 }}
+                              aria-label={showPassword ? 'Hide password' : 'Show password'}
                             >
                               {showPassword ? <VisibilityOff /> : <Visibility />}
                             </IconButton>
@@ -356,11 +377,11 @@ const Login = () => {
                         }}
                       />
                     </Stack>
-                    
+
                     <Box sx={{ textAlign: 'right', mt: 2 }}>
-                      <Link 
-                        component={RouterLink} 
-                        to="/forgot-password" 
+                      <Link
+                        component={RouterLink}
+                        to="/forgot-password"
                         variant="body2"
                         sx={{
                           color: 'primary.main',
@@ -392,9 +413,9 @@ const Login = () => {
               <Box sx={{ textAlign: 'center', mt: 4 }}>
                 <Typography variant="body2" color="text.secondary">
                   Don't have an account?{' '}
-                  <Link 
-                    component={RouterLink} 
-                    to="/register" 
+                  <Link
+                    component={RouterLink}
+                    to="/register"
                     sx={{
                       color: 'primary.main',
                       textDecoration: 'none',
@@ -412,16 +433,18 @@ const Login = () => {
           </Grid>
         </Grid>
       </Container>
-      
+
       <Snackbar
         open={showSnackbar}
         autoHideDuration={3000}
         onClose={handleSnackbarClose}
+        aria-label='login success notification'
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert 
-          onClose={handleSnackbarClose} 
-          severity="success" 
+        <Alert
+          onClose={handleSnackbarClose}
+          severity="success"
+          aria-label='login success message'
           sx={{ width: '100%', borderRadius: 2 }}
         >
           {snackbarMessage}
