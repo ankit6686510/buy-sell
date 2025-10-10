@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payment Confirmation - SecondMarket</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+      }
+      .email-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background: linear-gradient(135deg, #55286f 0%, #bc96e6 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+        border-radius: 10px 10px 0 0;
+      }
+      .content {
+        background: white;
+        padding: 30px;
+        border-radius: 0 0 10px 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .button {
+        display: inline-block;
+        background: linear-gradient(135deg, #55286f 0%, #bc96e6 100%);
+        color: white;
+        padding: 12px 24px;
+        text-decoration: none;
+        border-radius: 6px;
+        margin: 20px 0;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        color: #666;
+        font-size: 14px;
+      }
+      .transaction-card {
+        background-color: #f8f9fa;
+        border-left: 4px solid #28a745;
+        padding: 20px;
+        margin: 25px 0;
+        border-radius: 8px;
+      }
+      .success-badge {
+        display: inline-block;
+        background: #28a745;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+        margin-bottom: 15px;
+      }
+      .transaction-details {
+        margin: 15px 0;
+      }
+      .transaction-details strong {
+        color: #55286f;
+      }
+      .amount-highlight {
+        font-size: 24px;
+        font-weight: bold;
+        color: #28a745;
+        text-align: center;
+        margin: 20px 0;
+      }
+      .security-note {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 6px;
+      }
+      .unsubscribe {
+        margin-top: 15px;
+        font-size: 11px;
+        opacity: 0.7;
+      }
+      .unsubscribe a {
+        color: #bc96e6;
+      }
+
+      @media only screen and (max-width: 600px) {
+        .email-container {
+          width: 100% !important;
+          margin: 0 !important;
+          padding: 10px !important;
+        }
+        .header {
+          padding: 25px 15px !important;
+        }
+        .content {
+          padding: 25px 15px !important;
+        }
+        .footer a {
+          display: block;
+          margin: 5px 0 !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="header">
+        <h1>SecondMarket</h1>
+        <p>India's Smart B2B Marketplace</p>
+      </div>
+
+      <div class="content">
+        <h2>✅ Payment Successful!</h2>
+
+        <p>
+          Hi {{customerName}}, your payment has been processed successfully.
+          Here are your transaction details:
+        </p>
+
+        <div class="transaction-card">
+          <div class="success-badge">✓ Payment Confirmed</div>
+
+          <div class="amount-highlight">₹{{amount}}</div>
+
+          <div class="transaction-details">
+            <p><strong>Transaction ID:</strong> {{transactionId}}</p>
+            <p><strong>Payment Method:</strong> {{paymentMethod}}</p>
+            <p><strong>Date & Time:</strong> {{transactionDate}}</p>
+            <p>
+              <strong>Status:</strong>
+              <span style="color: #28a745; font-weight: bold">Successful</span>
+            </p>
+          </div>
+
+          <div class="transaction-details">
+            <p><strong>Description:</strong> {{description}}</p>
+            <p><strong>Merchant:</strong> SecondMarket Technologies</p>
+            <p><strong>Service Period:</strong> {{servicePeriod}}</p>
+          </div>
+        </div>
+
+        <div class="security-note">
+          <h4>🔒 Security Notice</h4>
+          <p>
+            This payment was processed securely through our verified payment
+            gateway. Your financial information is protected with bank-grade
+            encryption.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0">
+          <a href="{{receiptUrl}}" class="button">Download Receipt</a>
+          <a href="{{dashboardUrl}}" class="button">View Dashboard</a>
+        </div>
+
+        <p><strong>What's Next?</strong></p>
+        <ul>
+          <li>Your service is now active and ready to use</li>
+          <li>You'll receive separate confirmation for service activation</li>
+          <li>Access your enhanced features from your dashboard</li>
+          <li>Contact support if you have any questions</li>
+        </ul>
+
+        <p>
+          Thank you for choosing SecondMarket!<br />
+          <strong>The SecondMarket Team</strong>
+        </p>
+      </div>
+
+      <div class="footer">
+        <p>
+          &copy; 2024 SecondMarket. All rights reserved.<br />
+          Secure B2B Transactions Made Simple.
+        </p>
+
+        <div class="unsubscribe">
+          <a href="{{unsubscribeUrl}}">Unsubscribe</a> |
+          <a href="{{preferencesUrl}}">Email Preferences</a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

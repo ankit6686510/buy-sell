@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>New RFQ Opportunity - SecondMarket</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+      }
+      .email-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background: linear-gradient(135deg, #55286f 0%, #bc96e6 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+        border-radius: 10px 10px 0 0;
+      }
+      .content {
+        background: white;
+        padding: 30px;
+        border-radius: 0 0 10px 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .button {
+        display: inline-block;
+        background: linear-gradient(135deg, #55286f 0%, #bc96e6 100%);
+        color: white;
+        padding: 12px 24px;
+        text-decoration: none;
+        border-radius: 6px;
+        margin: 20px 0;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        color: #666;
+        font-size: 14px;
+      }
+      .rfq-card {
+        background-color: #f8f9fa;
+        border-left: 4px solid #55286f;
+        padding: 20px;
+        margin: 25px 0;
+        border-radius: 8px;
+      }
+      .urgency-badge {
+        display: inline-block;
+        background: #ff6b35;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-bottom: 15px;
+      }
+      .rfq-details {
+        margin: 15px 0;
+      }
+      .rfq-details strong {
+        color: #55286f;
+      }
+      .unsubscribe {
+        margin-top: 15px;
+        font-size: 11px;
+        opacity: 0.7;
+      }
+      .unsubscribe a {
+        color: #bc96e6;
+      }
+
+      @media only screen and (max-width: 600px) {
+        .email-container {
+          width: 100% !important;
+          margin: 0 !important;
+          padding: 10px !important;
+        }
+        .header {
+          padding: 25px 15px !important;
+        }
+        .content {
+          padding: 25px 15px !important;
+        }
+        .footer a {
+          display: block;
+          margin: 5px 0 !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="header">
+        <h1>SecondMarket</h1>
+        <p>India's Smart B2B Marketplace</p>
+      </div>
+
+      <div class="content">
+        <h2>🎯 New RFQ Opportunity for {{companyName}}</h2>
+
+        <p>
+          Great news! A new Request for Quotation (RFQ) matching your business
+          profile has been posted on SecondMarket.
+        </p>
+
+        <div class="rfq-card">
+          <div class="urgency-badge">{{urgencyLevel}}</div>
+          <h3>{{rfqTitle}}</h3>
+
+          <div class="rfq-details">
+            <p><strong>Category:</strong> {{category}}</p>
+            <p><strong>Quantity Required:</strong> {{quantity}}</p>
+            <p><strong>Budget Range:</strong> {{budgetRange}}</p>
+            <p><strong>Delivery Location:</strong> {{deliveryLocation}}</p>
+            <p><strong>Expected Delivery:</strong> {{expectedDelivery}}</p>
+            <p><strong>Buyer Location:</strong> {{buyerLocation}}</p>
+          </div>
+
+          <p><strong>Requirements:</strong></p>
+          <p>{{requirements}}</p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0">
+          <a href="{{viewRfqUrl}}" class="button"
+            >View Full RFQ & Submit Quote</a
+          >
+        </div>
+
+        <p>
+          <strong>Why respond quickly?</strong> Early responses get higher
+          visibility and better chances of winning the deal. Most successful
+          quotes are submitted within the first 24 hours.
+        </p>
+
+        <p>
+          Best regards,<br />
+          <strong>The SecondMarket Team</strong>
+        </p>
+      </div>
+
+      <div class="footer">
+        <p>
+          &copy; 2024 SecondMarket. All rights reserved.<br />
+          Connecting Buyers and Suppliers Across India.
+        </p>
+
+        <div class="unsubscribe">
+          <a href="{{unsubscribeUrl}}">Unsubscribe</a> |
+          <a href="{{preferencesUrl}}">Notification Preferences</a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
