@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quote Received - SecondMarket</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+      }
+      .email-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background: linear-gradient(135deg, #55286f 0%, #bc96e6 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+        border-radius: 10px 10px 0 0;
+      }
+      .content {
+        background: white;
+        padding: 30px;
+        border-radius: 0 0 10px 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .button {
+        display: inline-block;
+        background: linear-gradient(135deg, #55286f 0%, #bc96e6 100%);
+        color: white;
+        padding: 12px 24px;
+        text-decoration: none;
+        border-radius: 6px;
+        margin: 20px 0;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        color: #666;
+        font-size: 14px;
+      }
+      .quote-card {
+        background-color: #f8f9fa;
+        border-left: 4px solid #55286f;
+        padding: 20px;
+        margin: 25px 0;
+        border-radius: 8px;
+      }
+      .supplier-badge {
+        display: inline-block;
+        background: #28a745;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+        margin-bottom: 15px;
+      }
+      .quote-details {
+        margin: 15px 0;
+      }
+      .quote-details strong {
+        color: #55286f;
+      }
+      .price-highlight {
+        font-size: 24px;
+        font-weight: bold;
+        color: #55286f;
+        text-align: center;
+        margin: 20px 0;
+      }
+      .comparison-note {
+        background-color: #e8f5e8;
+        border-left: 4px solid #28a745;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 6px;
+      }
+      .unsubscribe {
+        margin-top: 15px;
+        font-size: 11px;
+        opacity: 0.7;
+      }
+      .unsubscribe a {
+        color: #bc96e6;
+      }
+
+      @media only screen and (max-width: 600px) {
+        .email-container {
+          width: 100% !important;
+          margin: 0 !important;
+          padding: 10px !important;
+        }
+        .header {
+          padding: 25px 15px !important;
+        }
+        .content {
+          padding: 25px 15px !important;
+        }
+        .footer a {
+          display: block;
+          margin: 5px 0 !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="header">
+        <h1>SecondMarket</h1>
+        <p>India's Smart B2B Marketplace</p>
+      </div>
+
+      <div class="content">
+        <h2>💰 You've Received a New Quote!</h2>
+
+        <p>
+          Great news {{buyerName}}! A supplier has submitted a quote for your
+          RFQ: <strong>{{rfqTitle}}</strong>
+        </p>
+
+        <div class="quote-card">
+          <div class="supplier-badge">✓ Verified Supplier</div>
+          <h3>{{supplierName}}</h3>
+
+          <div class="quote-details">
+            <p><strong>Company:</strong> {{supplierCompany}}</p>
+            <p><strong>Location:</strong> {{supplierLocation}}</p>
+            <p><strong>Experience:</strong> {{supplierExperience}}</p>
+            <p><strong>Rating:</strong> {{supplierRating}}/5 ⭐</p>
+          </div>
+
+          <div class="price-highlight">Quote Price: ₹{{quotePrice}}</div>
+
+          <div class="quote-details">
+            <p><strong>Delivery Time:</strong> {{deliveryTime}}</p>
+            <p><strong>Payment Terms:</strong> {{paymentTerms}}</p>
+            <p><strong>Warranty:</strong> {{warranty}}</p>
+          </div>
+
+          <p><strong>Additional Notes:</strong></p>
+          <p>{{additionalNotes}}</p>
+        </div>
+
+        <div class="comparison-note">
+          <h4>💡 Quote Summary</h4>
+          <p><strong>Total Quotes Received:</strong> {{totalQuotes}}</p>
+          <p><strong>Price Range:</strong> ₹{{minPrice}} - ₹{{maxPrice}}</p>
+          <p>
+            <strong>This Quote Ranking:</strong> {{priceRanking}} out of
+            {{totalQuotes}}
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0">
+          <a href="{{viewQuoteUrl}}" class="button">View Quote Details</a>
+          <a href="{{compareQuotesUrl}}" class="button">Compare All Quotes</a>
+        </div>
+
+        <p>
+          <strong>Next Steps:</strong> Review the quote details, compare with
+          other submissions, and contact the supplier directly if you're
+          interested in proceeding.
+        </p>
+
+        <p>
+          Best regards,<br />
+          <strong>The SecondMarket Team</strong>
+        </p>
+      </div>
+
+      <div class="footer">
+        <p>
+          &copy; 2024 SecondMarket. All rights reserved.<br />
+          Connecting Buyers and Suppliers Across India.
+        </p>
+
+        <div class="unsubscribe">
+          <a href="{{unsubscribeUrl}}">Unsubscribe</a> |
+          <a href="{{preferencesUrl}}">Email Preferences</a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
