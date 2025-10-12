@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -19,19 +19,14 @@ import {
   IconButton,
   Tabs,
   Tab,
-  Badge,
   LinearProgress,
-  Stepper,
-  Step,
-  StepLabel,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   CircularProgress,
   Snackbar,
-  Switch,
-  FormControlLabel
+  Tooltip
 } from '@mui/material';
 import {
   Business,
@@ -39,28 +34,42 @@ import {
   Verified,
   Star,
   TrendingUp,
-  People,
   AttachMoney,
   Upload,
   Download,
   Visibility,
   CreditCard,
-  LocalOffer,
   Analytics,
-  Settings,
   PhotoCamera,
   Description,
   LocationOn,
   Phone,
   Email,
-  Language,
-  Category,
   CheckCircle,
   Schedule,
-  Warning
+  Warning,
+  Category, // <--- FIXED: CRITICAL MISSING IMPORT
+  Language  // <--- FIXED: CRITICAL MISSING IMPORT
 } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import api from '../services/api';
+
+// Placeholder for a chart component, assuming a simple area chart like Recharts/Nivo
+const PlaceholderChart = ({ title, data, color }) => (
+  <Card variant="outlined">
+    <CardContent>
+      <Typography variant="subtitle1" gutterBottom>{title}</Typography>
+      <Box sx={{ height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.50', borderRadius: 1 }}>
+        <Typography variant="h5" color={color}>
+          [Chart Placeholder]
+        </Typography>
+      </Box>
+      <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+        Data for the last 30 days.
+      </Typography>
+    </CardContent>
+  </Card>
+);
 
 const CompanyDashboard = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -68,12 +77,13 @@ const CompanyDashboard = () => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+  const [dialogLoading, setDialogLoading] = useState(false); // New state for dialog actions
+
   // Dialog states
   const [editProfileDialog, setEditProfileDialog] = useState(false);
   const [uploadDocDialog, setUploadDocDialog] = useState(false);
   const [buyCreditsDialog, setBuyCreditsDialog] = useState(false);
-  
+
   // Form states
   const [profileForm, setProfileForm] = useState({
     companyName: '',
@@ -90,13 +100,15 @@ const CompanyDashboard = () => {
     panNumber: '',
     yearEstablished: '',
     numberOfEmployees: '',
-    annualTurnover: ''
+    annualTurnover: '',
+    logo: '' // Added logo URL field
   });
-  
+
   const [selectedFile, setSelectedFile] = useState(null);
   const [documentType, setDocumentType] = useState('');
   const [creditAmount, setCreditAmount] = useState('');
-  
+  const [logoFile, setLogoFile] = useState(null); // New state for logo file upload
+
   // Snackbar
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -151,92 +163,114 @@ const CompanyDashboard = () => {
     '₹500+ Cr'
   ];
 
-  useEffect(() => {
-    loadCompanyData();
-    loadAnalytics();
-  }, []);
+  const states = [
+    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa",
+    "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala",
+    "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland",
+    "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana",
+    "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+    "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu",
+    "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+  ];
 
-  const loadCompanyData = async () => {
-    try {
-      const response = await api.get('/api/companies/me/profile');
-      setCompanyData(response.data.company);
-      if (response.data.company) {
-        setProfileForm(response.data.company);
-      }
-    } catch (err) {
-      // If company profile doesn't exist, that's expected for new users
-      if (err.message === 'Company profile not found') {
-        setCompanyData(null);
-        setError(null);
-      } else {
-        setError('Failed to load company data');
-        console.error('Company data error:', err);
-      }
-    }
+  // Helper function to load Razorpay script
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
   };
 
-  const loadAnalytics = async () => {
+  const loadCompanyData = useCallback(async () => {
     try {
-      const response = await api.get('/api/companies/me/analytics');
-      setAnalytics(response.data.analytics);
+      const response = await api.get('/api/companies/my-profile');
+      const data = response.data.company;
+      setCompanyData(data);
+      if (data) {
+        setProfileForm(prev => ({
+          ...prev,
+          ...data,
+          // Ensure all keys are present even if null/undefined in data
+          companyName: data.companyName || '',
+          description: data.description || '',
+          industry: data.industry || '',
+          address: data.address || '',
+          city: data.city || '',
+          state: data.state || '',
+          pincode: data.pincode || '',
+          phone: data.phone || '',
+          email: data.email || '',
+          website: data.website || '',
+          gstNumber: data.gstNumber || '',
+          panNumber: data.panNumber || '',
+          yearEstablished: data.yearEstablished || '',
+          numberOfEmployees: data.numberOfEmployees || '',
+          annualTurnover: data.annualTurnover || '',
+          logo: data.logo || ''
+        }));
+      }
+    } catch (err) {
+      setError('Failed to load company data. Please try again.');
+      console.error('Company data error:', err);
+    }
+  }, []);
+
+  const loadAnalytics = useCallback(async () => {
+    try {
+      const response = await api.get('/api/companies/analytics');
+      setAnalytics(response.data);
     } catch (err) {
       console.error('Analytics error:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleCreateProfile = async () => {
-    try {
-      // Map form data to Company model structure
-      const companyPayload = {
-        companyName: profileForm.companyName,
-        description: profileForm.description,
-        businessType: profileForm.industry || 'manufacturer', // Use industry as businessType
-        categories: [profileForm.industry || 'Other'], // Add categories array
-        yearEstablished: parseInt(profileForm.yearEstablished) || undefined,
-        employeeCount: profileForm.numberOfEmployees,
-        annualTurnover: profileForm.annualTurnover,
-        businessAddress: {
-          address: profileForm.address || 'Not provided',
-          city: profileForm.city || 'Not provided',
-          state: profileForm.state || 'Not provided',
-          pincode: profileForm.pincode || '000000',
-          country: 'India'
-        },
-        contactInfo: {
-          phone: profileForm.phone || user?.phoneNumber || 'Not provided',
-          email: profileForm.email || user?.email,
-          website: profileForm.website || ''
-        },
-        gstNumber: profileForm.gstNumber || undefined
-      };
+  useEffect(() => {
+    loadCompanyData();
+    loadAnalytics();
+  }, [loadCompanyData, loadAnalytics]);
 
-      const response = await api.post('/api/companies', companyPayload);
-      
-      if (response.data.success) {
-        setCompanyData(response.data.company);
-        setEditProfileDialog(false);
-        showSnackbar('Company profile created successfully!', 'success');
-      }
-    } catch (err) {
-      showSnackbar('Failed to create profile', 'error');
-      console.error('Create profile error:', err);
-    }
-  };
 
   const handleUpdateProfile = async () => {
+    setDialogLoading(true);
     try {
-      const response = await api.put('/api/companies/me/profile', profileForm);
-      
+      // Logic for uploading logo first
+      let updatedProfileForm = { ...profileForm };
+      if (logoFile) {
+        const logoFormData = new FormData();
+        logoFormData.append('logo', logoFile);
+        
+        // Assuming an API endpoint for logo upload that returns the new logo URL
+        const logoResponse = await api.post('/api/companies/upload-logo', logoFormData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+
+        if (logoResponse.data.success) {
+          updatedProfileForm.logo = logoResponse.data.logoUrl;
+          setProfileForm(prev => ({ ...prev, logo: logoResponse.data.logoUrl })); // Update form state with new URL
+        }
+      }
+
+      // Update remaining profile data
+      const response = await api.put('/api/companies/profile', updatedProfileForm);
+
       if (response.data.success) {
         setCompanyData(response.data.company);
         setEditProfileDialog(false);
-        showSnackbar('Company profile updated successfully!', 'success');
+        setLogoFile(null); // Clear logo file state
+        showSnackbar('Company profile updated successfully! 🎉', 'success');
       }
     } catch (err) {
       showSnackbar('Failed to update profile', 'error');
       console.error('Update profile error:', err);
+    } finally {
+      setDialogLoading(false);
     }
   };
 
@@ -251,7 +285,21 @@ const CompanyDashboard = () => {
     }
   };
 
+  const handleLogoUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit for logo
+        showSnackbar('Logo size should be less than 2MB', 'error');
+        return;
+      }
+      setLogoFile(file);
+      // Optional: Set a temporary URL for preview in the dialog
+      // setProfileForm(prev => ({ ...prev, logo: URL.createObjectURL(file) }));
+    }
+  };
+
   const handleDocumentUpload = async () => {
+    setDialogLoading(true);
     try {
       if (!selectedFile || !documentType) {
         showSnackbar('Please select a file and document type', 'error');
@@ -269,7 +317,7 @@ const CompanyDashboard = () => {
       });
 
       if (response.data.success) {
-        showSnackbar('Document uploaded successfully!', 'success');
+        showSnackbar('Document uploaded successfully! 📄', 'success');
         setUploadDocDialog(false);
         setSelectedFile(null);
         setDocumentType('');
@@ -278,30 +326,42 @@ const CompanyDashboard = () => {
     } catch (err) {
       showSnackbar('Failed to upload document', 'error');
       console.error('Document upload error:', err);
+    } finally {
+      setDialogLoading(false);
     }
   };
 
   const handleBuyCredits = async () => {
-    try {
-      if (!creditAmount || parseInt(creditAmount) < 10) {
-        showSnackbar('Minimum credit purchase is 10 credits', 'error');
-        return;
-      }
+    setDialogLoading(true);
+    const amount = parseInt(creditAmount);
+    if (!amount || amount < 10) {
+      showSnackbar('Minimum credit purchase is 10 credits', 'error');
+      setDialogLoading(false);
+      return;
+    }
 
+    const isRazorpayLoaded = await loadRazorpayScript();
+    if (!isRazorpayLoaded) {
+      showSnackbar('Payment gateway failed to load. Please try again.', 'error');
+      setDialogLoading(false);
+      return;
+    }
+
+    try {
       const response = await api.post('/api/companies/buy-credits', {
-        credits: parseInt(creditAmount)
+        credits: amount
       });
 
       if (response.data.success) {
-        // Open Razorpay for payment
         const options = {
           key: process.env.REACT_APP_RAZORPAY_KEY_ID,
           amount: response.data.order.amount,
           currency: 'INR',
           name: 'BudMatching',
-          description: 'Lead Credits Purchase',
+          description: `Purchase of ${amount} Lead Credits`,
           order_id: response.data.order.id,
           handler: async function (razorpayResponse) {
+            setDialogLoading(true); // Re-enable loading for verification step
             try {
               await api.post('/api/payments/verify', {
                 razorpay_order_id: razorpayResponse.razorpay_order_id,
@@ -309,19 +369,22 @@ const CompanyDashboard = () => {
                 razorpay_signature: razorpayResponse.razorpay_signature,
                 type: 'credits'
               });
-              
-              showSnackbar('Credits purchased successfully!', 'success');
+
+              showSnackbar('Credits purchased successfully! 💰', 'success');
               setBuyCreditsDialog(false);
               setCreditAmount('');
               loadCompanyData();
             } catch (error) {
               showSnackbar('Payment verification failed', 'error');
+              console.error('Payment verification error:', error);
+            } finally {
+              setDialogLoading(false);
             }
           },
           prefill: {
-            name: companyData?.companyName || user?.name,
-            email: companyData?.email || user?.email,
-            contact: companyData?.phone || user?.phone
+            name: companyData?.companyName || user?.name || '',
+            email: companyData?.email || user?.email || '',
+            contact: companyData?.phone || user?.phone || ''
           },
           theme: {
             color: '#1976d2'
@@ -329,12 +392,19 @@ const CompanyDashboard = () => {
         };
 
         const razorpay = new window.Razorpay(options);
+        razorpay.on('payment.failed', function (response) {
+            showSnackbar(`Payment failed: ${response.error.description}`, 'error');
+            setDialogLoading(false); // Disable loading on fail
+        });
         razorpay.open();
       }
     } catch (err) {
       showSnackbar('Failed to initiate payment', 'error');
       console.error('Buy credits error:', err);
+      // FIXED: Ensure dialog loading is disabled on API failure before Razorpay is launched
+      setDialogLoading(false); 
     }
+    // Removed the complex 'finally' block as the logic is now handled in the try/catch blocks more cleanly
   };
 
   const showSnackbar = (message, severity = 'success') => {
@@ -344,114 +414,65 @@ const CompanyDashboard = () => {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'INR'
+      currency: 'INR',
+      minimumFractionDigits: 0
     }).format(amount || 0);
   };
 
   const getVerificationStatus = (documents) => {
     if (!documents || documents.length === 0) return { status: 'pending', label: 'Pending', color: 'warning' };
-    
+
     const verified = documents.filter(doc => doc.status === 'verified').length;
     const total = documents.length;
-    
-    if (verified === total) return { status: 'verified', label: 'Verified', color: 'success' };
-    if (verified > 0) return { status: 'partial', label: 'Partial', color: 'info' };
-    return { status: 'pending', label: 'Pending', color: 'warning' };
+
+    if (verified === total) return { status: 'verified', label: 'Fully Verified', color: 'success' };
+    if (verified > 0) return { status: 'partial', label: 'Partial Verification', color: 'info' };
+    return { status: 'pending', label: 'Pending Verification', color: 'warning' };
   };
 
-  const NoCompanyProfile = () => (
-    <Card sx={{ textAlign: 'center', py: 6 }}>
-      <CardContent>
-        <Business sx={{ fontSize: 80, color: 'primary.main', mb: 3 }} />
-        <Typography variant="h4" gutterBottom>
-          Welcome to Company Dashboard
-        </Typography>
-        <Typography variant="body1" color="textSecondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
-          Create your company profile to start showcasing your business, connect with potential clients, 
-          and access powerful tools to grow your business on our platform.
-        </Typography>
-        <Button
-          variant="contained"
-          size="large"
-          startIcon={<Business />}
-          onClick={() => setEditProfileDialog(true)}
-          sx={{ mb: 3 }}
-        >
-          Create Company Profile
-        </Button>
-        <Box sx={{ mt: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Why create a company profile?
-          </Typography>
-          <Grid container spacing={3} sx={{ mt: 2 }}>
-            <Grid item xs={12} md={4}>
-              <Verified sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
-              <Typography variant="subtitle2">Build Trust</Typography>
-              <Typography variant="body2" color="textSecondary">
-                Verified company profiles build credibility with customers
-              </Typography>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TrendingUp sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
-              <Typography variant="subtitle2">Increase Visibility</Typography>
-              <Typography variant="body2" color="textSecondary">
-                Get discovered by potential customers searching for your services
-              </Typography>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Analytics sx={{ fontSize: 40, color: 'info.main', mb: 1 }} />
-              <Typography variant="subtitle2">Track Performance</Typography>
-              <Typography variant="body2" color="textSecondary">
-                Access detailed analytics and insights about your business
-              </Typography>
-            </Grid>
-          </Grid>
-        </Box>
-      </CardContent>
-    </Card>
-  );
-
+  // --- Components for Tabs ---
   const CompanyOverview = () => {
-    if (!companyData) {
-      return <NoCompanyProfile />;
-    }
-
     const verification = getVerificationStatus(companyData?.documents);
-    
+
+    // Calculate completion for display
+    const profileCompletion = Math.round(((companyData?.profileCompleteness || 0) * 100));
+
     return (
       <Grid container spacing={3}>
         {/* Company Profile Card */}
         <Grid item xs={12} md={8}>
-          <Card>
+          <Card elevation={2}>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Avatar
-                    sx={{ width: 80, height: 80, mr: 3 }}
+                    sx={{ width: 80, height: 80, mr: 3, bgcolor: 'primary.light', border: '2px solid' }}
                     src={companyData?.logo}
+                    alt={companyData?.companyName?.charAt(0) || 'C'}
                   >
                     <Business sx={{ fontSize: 40 }} />
                   </Avatar>
                   <Box>
                     <Typography variant="h5" fontWeight="bold">
-                      {companyData?.companyName || 'Company Name'}
+                      {companyData?.companyName || 'Set Your Company Name'}
                     </Typography>
                     <Typography variant="body1" color="textSecondary" gutterBottom>
-                      {companyData?.industry || 'Industry'}
+                      {/* FIXED: Category icon now imported */}
+                      <Category sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} /> {companyData?.industry || 'Industry Not Set'} 
                     </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
                       <Chip
                         icon={verification.status === 'verified' ? <Verified /> : <Schedule />}
                         label={verification.label}
                         color={verification.color}
                         size="small"
+                        variant="outlined"
                       />
-                      {companyData?.trustScore && (
+                      {companyData?.trustScore !== undefined && (
                         <Chip
                           icon={<Star />}
-                          label={`${companyData.trustScore} Trust Score`}
+                          label={`${companyData.trustScore.toFixed(1)} Trust Score`}
                           color="primary"
-                          variant="outlined"
                           size="small"
                         />
                       )}
@@ -459,9 +480,10 @@ const CompanyDashboard = () => {
                   </Box>
                 </Box>
                 <Button
-                  variant="outlined"
+                  variant="contained"
                   startIcon={<Edit />}
                   onClick={() => setEditProfileDialog(true)}
+                  color="primary"
                 >
                   Edit Profile
                 </Button>
@@ -471,53 +493,45 @@ const CompanyDashboard = () => {
 
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" gutterBottom>Company Details</Typography>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="textSecondary">Location</Typography>
-                    <Typography variant="body1">
-                      {companyData?.city}, {companyData?.state}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="textSecondary">Established</Typography>
-                    <Typography variant="body1">
-                      {companyData?.yearEstablished || 'Not specified'}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="textSecondary">Employees</Typography>
-                    <Typography variant="body1">
-                      {companyData?.numberOfEmployees || 'Not specified'}
-                    </Typography>
-                  </Box>
+                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Contact & Address</Typography>
+                  {[
+                    { icon: <LocationOn color="action" />, label: 'Address', value: `${companyData?.address || ''}, ${companyData?.city || ''}, ${companyData?.state || ''} - ${companyData?.pincode || ''}`.replace(/,\s*,\s*|^\s*,\s*|,\s*$/g, '').trim() || 'Not specified' },
+                    { icon: <Phone color="action" />, label: 'Phone', value: companyData?.phone || 'Not provided' },
+                    { icon: <Email color="action" />, label: 'Email', value: companyData?.email || 'Not provided' },
+                    { icon: <Language color="action" />, label: 'Website', value: companyData?.website || 'Not provided' }, // FIXED: Language icon now imported
+                  ].map((item, index) => (
+                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <Tooltip title={item.label} placement="left">
+                        {item.icon}
+                      </Tooltip>
+                      <Box sx={{ ml: 1 }}>
+                        <Typography variant="body2" color="textSecondary" sx={{ lineHeight: 1 }}>{item.label}:</Typography>
+                        <Typography variant="body1">{item.value}</Typography>
+                      </Box>
+                    </Box>
+                  ))}
                 </Grid>
-                
+
                 <Grid item xs={12} md={6}>
-                  <Typography variant="subtitle2" gutterBottom>Contact Information</Typography>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="textSecondary">Phone</Typography>
-                    <Typography variant="body1">
-                      {companyData?.phone || 'Not provided'}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="textSecondary">Email</Typography>
-                    <Typography variant="body1">
-                      {companyData?.email || 'Not provided'}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="textSecondary">Website</Typography>
-                    <Typography variant="body1">
-                      {companyData?.website || 'Not provided'}
-                    </Typography>
-                  </Box>
+                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Business Metrics</Typography>
+                  {[
+                    { label: 'Year Established', value: companyData?.yearEstablished || 'Not specified' },
+                    { label: 'Employees', value: companyData?.numberOfEmployees || 'Not specified' },
+                    { label: 'Annual Turnover', value: companyData?.annualTurnover || 'Not specified' },
+                    { label: 'GST Number', value: companyData?.gstNumber || 'Not provided' },
+                    { label: 'PAN Number', value: companyData?.panNumber || 'Not provided' },
+                  ].map((item, index) => (
+                    <Box key={index} sx={{ mb: 1 }}>
+                      <Typography variant="body2" color="textSecondary" sx={{ lineHeight: 1 }}>{item.label}</Typography>
+                      <Typography variant="body1">{item.value}</Typography>
+                    </Box>
+                  ))}
                 </Grid>
               </Grid>
 
               {companyData?.description && (
-                <Box sx={{ mt: 3 }}>
-                  <Typography variant="subtitle2" gutterBottom>About Company</Typography>
+                <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Company Description</Typography>
                   <Typography variant="body2" color="textSecondary">
                     {companyData.description}
                   </Typography>
@@ -529,24 +543,25 @@ const CompanyDashboard = () => {
 
         {/* Credits & Actions */}
         <Grid item xs={12} md={4}>
-          <Grid container spacing={2}>
+          <Grid container spacing={3}>
             {/* Lead Credits */}
             <Grid item xs={12}>
-              <Card sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+              <Card sx={{ background: 'linear-gradient(135deg, #1976d2 0%, #3f51b5 100%)', color: 'white' }}>
                 <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <CreditCard sx={{ fontSize: 30, mr: 2 }} />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
                       <Typography variant="h6">Lead Credits</Typography>
-                      <Typography variant="h4" fontWeight="bold">
+                      <Typography variant="h3" fontWeight="bold" sx={{ mt: 1 }}>
                         {companyData?.leadCredits || 0}
                       </Typography>
                     </Box>
+                    <CreditCard sx={{ fontSize: 50, opacity: 0.7 }} />
                   </Box>
                   <Button
                     variant="contained"
                     size="small"
-                    sx={{ bgcolor: 'rgba(255,255,255,0.2)' }}
+                    fullWidth
+                    sx={{ mt: 2, bgcolor: 'rgba(255,255,255,0.3)', '&:hover': { bgcolor: 'rgba(255,255,255,0.5)' } }}
                     startIcon={<AttachMoney />}
                     onClick={() => setBuyCreditsDialog(true)}
                   >
@@ -556,145 +571,114 @@ const CompanyDashboard = () => {
               </Card>
             </Grid>
 
-            {/* Quick Actions */}
+            {/* Verification Progress */}
             <Grid item xs={12}>
-              <Card>
+              <Card elevation={2}>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>Quick Actions</Typography>
+                  <Typography variant="h6" gutterBottom>Profile Health</Typography>
+                  <Box sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="body1" fontWeight="medium">Profile Completion</Typography>
+                      <Typography variant="body1" fontWeight="bold" color="primary">
+                        {profileCompletion}%
+                      </Typography>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={profileCompletion}
+                      sx={{ height: 10, borderRadius: 5 }}
+                      color={profileCompletion < 50 ? 'error' : profileCompletion < 90 ? 'warning' : 'success'}
+                    />
+                    {profileCompletion < 100 && (
+                      <Alert severity="warning" sx={{ mt: 1, p: 0.5 }}>
+                        Complete your profile for a higher Trust Score.
+                      </Alert>
+                    )}
+                  </Box>
+
+                  <Divider sx={{ my: 2 }} />
+
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Upload />}
-                      onClick={() => setUploadDocDialog(true)}
-                      size="small"
-                    >
-                      Upload Documents
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Visibility />}
-                      size="small"
-                    >
-                      Preview Profile
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Download />}
-                      size="small"
-                    >
-                      Download Brochure
-                    </Button>
+                    <VerificationCheck label="Phone Verified" isVerified={companyData?.phoneVerified} />
+                    <VerificationCheck label="Email Verified" isVerified={companyData?.emailVerified} />
+                    <VerificationCheck label="Documents Uploaded" isVerified={verification.status === 'verified'} />
                   </Box>
                 </CardContent>
               </Card>
             </Grid>
 
-            {/* Verification Progress */}
+            {/* Quick Actions - Merged into Profile Health Card or keep separate if design needs it */}
             <Grid item xs={12}>
-              <Card>
+              <Card elevation={2}>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>Verification Status</Typography>
-                  <Box sx={{ mb: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="body2">Profile Completion</Typography>
-                      <Typography variant="body2">
-                        {Math.round(((companyData?.profileCompleteness || 0) * 100))}%
-                      </Typography>
-                    </Box>
-                    <LinearProgress 
-                      variant="determinate" 
-                      value={(companyData?.profileCompleteness || 0) * 100} 
-                      sx={{ height: 8, borderRadius: 4 }}
-                    />
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Typography variant="body2">Phone Verified</Typography>
-                      {companyData?.phoneVerified ? 
-                        <CheckCircle color="success" fontSize="small" /> : 
-                        <Warning color="warning" fontSize="small" />
-                      }
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Typography variant="body2">Email Verified</Typography>
-                      {companyData?.emailVerified ? 
-                        <CheckCircle color="success" fontSize="small" /> : 
-                        <Warning color="warning" fontSize="small" />
-                      }
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Typography variant="body2">Documents</Typography>
-                      {verification.status === 'verified' ? 
-                        <CheckCircle color="success" fontSize="small" /> : 
-                        <Warning color="warning" fontSize="small" />
-                      }
-                    </Box>
-                  </Box>
+                  <Typography variant="h6" gutterBottom>Quick Actions</Typography>
+                  <Grid container spacing={1}>
+                    <Grid item xs={6}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<Upload />}
+                        onClick={() => setUploadDocDialog(true)}
+                        fullWidth
+                        size="small"
+                      >
+                        Upload Docs
+                      </Button>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<Visibility />}
+                        fullWidth
+                        size="small"
+                        // Add actual link/navigation later
+                      >
+                        Preview
+                      </Button>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<Download />}
+                        fullWidth
+                        size="small"
+                        disabled // Placeholder for future feature
+                      >
+                        Brochure
+                      </Button>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<TrendingUp />}
+                        fullWidth
+                        size="small"
+                        onClick={() => setActiveTab(2)}
+                      >
+                        View Analytics
+                      </Button>
+                    </Grid>
+                  </Grid>
                 </CardContent>
               </Card>
             </Grid>
           </Grid>
         </Grid>
-
-        {/* Analytics Overview */}
-        {analytics && (
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>Performance Overview</Typography>
-                <Grid container spacing={3}>
-                  <Grid item xs={6} md={3}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" color="primary.main">
-                        {analytics.profileViews || 0}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        Profile Views
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={6} md={3}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" color="success.main">
-                        {analytics.rfqsReceived || 0}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        RFQs Received
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={6} md={3}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" color="warning.main">
-                        {analytics.quotesSubmitted || 0}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        Quotes Submitted
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={6} md={3}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" color="error.main">
-                        {formatCurrency(analytics.totalRevenue || 0)}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        Total Revenue
-                      </Typography>
-                    </Box>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-          </Grid>
-        )}
       </Grid>
     );
   };
 
+  const VerificationCheck = ({ label, isVerified }) => (
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Typography variant="body2">{label}</Typography>
+      {isVerified ?
+        <CheckCircle color="success" fontSize="small" /> :
+        <Warning color="warning" fontSize="small" />
+      }
+    </Box>
+  );
+
   const DocumentsTab = () => (
-    <Card>
+    <Card elevation={2}>
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h6">Company Documents</Typography>
@@ -707,66 +691,125 @@ const CompanyDashboard = () => {
           </Button>
         </Box>
 
-        <Grid container spacing={2}>
-          {companyData?.documents?.map((doc, index) => (
-            <Grid item xs={12} md={6} key={index}>
-              <Card variant="outlined">
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Description sx={{ mr: 2, color: 'primary.main' }} />
-                      <Box>
-                        <Typography variant="subtitle2">{doc.type}</Typography>
-                        <Typography variant="body2" color="textSecondary">
-                          Uploaded on {new Date(doc.uploadedAt).toLocaleDateString()}
-                        </Typography>
+        <Grid container spacing={3}>
+          {companyData?.documents?.length > 0 ? (
+            companyData.documents.map((doc, index) => (
+              <Grid item xs={12} md={6} key={index}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Description sx={{ mr: 2, color: 'primary.main' }} />
+                        <Box>
+                          <Typography variant="subtitle2" fontWeight="bold">{doc.type}</Typography>
+                          <Typography variant="body2" color="textSecondary">
+                            Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()}
+                          </Typography>
+                        </Box>
                       </Box>
+                      <Chip
+                        label={doc.status}
+                        color={doc.status === 'verified' ? 'success' : doc.status === 'rejected' ? 'error' : 'warning'}
+                        size="small"
+                        icon={doc.status === 'verified' ? <Verified /> : doc.status === 'rejected' ? <Warning /> : <Schedule />}
+                      />
                     </Box>
-                    <Chip
-                      label={doc.status}
-                      color={doc.status === 'verified' ? 'success' : doc.status === 'rejected' ? 'error' : 'warning'}
-                      size="small"
-                    />
+                    {doc.remarks && (
+                      <Alert severity={doc.status === 'rejected' ? 'error' : 'info'} sx={{ mt: 2 }}>
+                        **Admin Remarks:** {doc.remarks}
+                      </Alert>
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
+          ) : (
+            <Grid item xs={12}>
+              <Box sx={{ textAlign: 'center', py: 8, border: '2px dashed', borderColor: 'grey.300', borderRadius: 2 }}>
+                <Description sx={{ fontSize: 80, color: 'grey.400', mb: 2 }} />
+                <Typography variant="h6" color="textSecondary" gutterBottom>
+                  No documents uploaded yet
+                </Typography>
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                  Upload your mandatory documents (GST, PAN etc.) to increase your Trust Score and get **Fully Verified**.
+                </Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<Upload />}
+                  onClick={() => setUploadDocDialog(true)}
+                >
+                  Start Uploading
+                </Button>
+              </Box>
+            </Grid>
+          )}
+        </Grid>
+      </CardContent>
+    </Card>
+  );
+
+  const AnalyticsTab = () => (
+    <Grid container spacing={3}>
+      {/* Key Metrics Cards */}
+      <Grid item xs={12}>
+        <Grid container spacing={3}>
+          {[
+            { title: 'Profile Views (30 Days)', value: analytics?.profileViews || 0, icon: <Visibility />, color: 'primary' },
+            { title: 'New RFQs Received', value: analytics?.rfqsReceived || 0, icon: <Description />, color: 'success' },
+            { title: 'Quotes Submitted', value: analytics?.quotesSubmitted || 0, icon: <Upload />, color: 'warning' },
+            { title: 'Estimated Revenue', value: formatCurrency(analytics?.totalRevenue || 0), icon: <AttachMoney />, color: 'error' },
+          ].map((item, index) => (
+            <Grid item xs={12} sm={6} md={3} key={index}>
+              <Card elevation={1}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                      <Typography variant="h6" color={`${item.color}.main`} fontWeight="bold">
+                        {item.value}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">{item.title}</Typography>
+                    </Box>
+                    {React.cloneElement(item.icon, { sx: { fontSize: 40, color: `${item.color}.light` } })}
                   </Box>
-                  {doc.remarks && (
-                    <Typography variant="body2" sx={{ mt: 2, p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
-                      {doc.remarks}
-                    </Typography>
-                  )}
                 </CardContent>
               </Card>
             </Grid>
           ))}
         </Grid>
+      </Grid>
 
-        {(!companyData?.documents || companyData.documents.length === 0) && (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Description sx={{ fontSize: 60, color: 'grey.400', mb: 2 }} />
-            <Typography variant="h6" color="textSecondary" gutterBottom>
-              No documents uploaded
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              Upload your company documents to get verified faster
-            </Typography>
-          </Box>
-        )}
-      </CardContent>
-    </Card>
+      {/* Chart Placeholders */}
+      <Grid item xs={12} md={6}>
+        <PlaceholderChart title="Profile Views Trend" data={[]} color="primary" />
+      </Grid>
+      <Grid item xs={12} md={6}>
+        <PlaceholderChart title="Quotes Submitted vs. RFQs Received" data={[]} color="success" />
+      </Grid>
+
+      {/* Detailed Report Link */}
+      <Grid item xs={12}>
+        <Alert severity="info">
+          This is a snapshot. For deeper analysis, heatmaps, and trend reports, please visit the dedicated **Analytics** page.
+        </Alert>
+      </Grid>
+    </Grid>
   );
+  // --- End Components for Tabs ---
+
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
         <CircularProgress />
+        <Typography variant="h6" sx={{ mt: 2 }}>Loading Company Data...</Typography>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ flexGrow: 1, p: 3 }}>
-      {/* Header */}
-      <Typography variant="h4" component="h1" gutterBottom>
-        Company Dashboard
+    <Box sx={{ flexGrow: 1, p: 3, bgcolor: 'grey.50', minHeight: '100vh' }}>
+      <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+        My Company Dashboard 👋
       </Typography>
 
       {error && (
@@ -776,8 +819,8 @@ const CompanyDashboard = () => {
       )}
 
       {/* Tabs */}
-      <Paper sx={{ mb: 3 }}>
-        <Tabs value={activeTab} onChange={(e, val) => setActiveTab(val)}>
+      <Paper sx={{ mb: 3 }} elevation={3}>
+        <Tabs value={activeTab} onChange={(e, val) => setActiveTab(val)} centered variant="fullWidth">
           <Tab label="Overview" icon={<Business />} />
           <Tab label="Documents" icon={<Description />} />
           <Tab label="Analytics" icon={<Analytics />} />
@@ -785,238 +828,306 @@ const CompanyDashboard = () => {
       </Paper>
 
       {/* Tab Content */}
-      {activeTab === 0 && <CompanyOverview />}
-      {activeTab === 1 && <DocumentsTab />}
-      {activeTab === 2 && (
-        <Alert severity="info">
-          Detailed analytics will be available here. Connect with the Analytics page for comprehensive data.
-        </Alert>
-      )}
+      <Box sx={{ p: 2 }}>
+        {activeTab === 0 && <CompanyOverview />}
+        {activeTab === 1 && <DocumentsTab />}
+        {activeTab === 2 && <AnalyticsTab />}
+      </Box>
 
       {/* Edit Profile Dialog */}
-      <Dialog open={editProfileDialog} onClose={() => setEditProfileDialog(false)} maxWidth="md" fullWidth>
+      <Dialog open={editProfileDialog} onClose={() => setEditProfileDialog(false)} maxWidth="lg" fullWidth>
         <DialogTitle>Edit Company Profile</DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} md={6}>
+          <Grid container spacing={3} sx={{ mt: 1 }}>
+
+            {/* Logo Upload Section */}
+            <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center' }}>
+              <Avatar
+                sx={{ width: 100, height: 100, mr: 3, bgcolor: 'primary.light', border: '2px solid' }}
+                src={logoFile ? URL.createObjectURL(logoFile) : profileForm.logo}
+                alt={profileForm.companyName?.charAt(0) || 'C'}
+              >
+                <Business sx={{ fontSize: 50 }} />
+              </Avatar>
+              <Box>
+                <Typography variant="subtitle1" fontWeight="bold">Company Logo</Typography>
+                <input
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  id="logo-upload-button"
+                  type="file"
+                  onChange={handleLogoUpload}
+                />
+                <label htmlFor="logo-upload-button">
+                  <Button variant="outlined" component="span" startIcon={<PhotoCamera />} size="small" sx={{ mt: 1 }}>
+                    Upload New Logo
+                  </Button>
+                </label>
+                {logoFile && (
+                  <Typography variant="body2" color="success.main" sx={{ mt: 0.5 }}>
+                    {logoFile.name} ready to upload.
+                  </Typography>
+                )}
+                <Typography variant="caption" display="block" color="textSecondary">
+                  Max size 2MB (JPG, PNG).
+                </Typography>
+              </Box>
+            </Grid>
+
+            {/* Profile Fields */}
+            <Grid item xs={12} sm={6} md={4}>
               <TextField
-                fullWidth
                 label="Company Name"
+                fullWidth
                 value={profileForm.companyName}
-                onChange={(e) => setProfileForm({...profileForm, companyName: e.target.value})}
+                onChange={(e) => setProfileForm({ ...profileForm, companyName: e.target.value })}
+                required
               />
             </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl fullWidth required>
                 <InputLabel>Industry</InputLabel>
                 <Select
                   value={profileForm.industry}
-                  onChange={(e) => setProfileForm({...profileForm, industry: e.target.value})}
                   label="Industry"
+                  onChange={(e) => setProfileForm({ ...profileForm, industry: e.target.value })}
                 >
-                  {industries.map((industry) => (
-                    <MenuItem key={industry} value={industry}>{industry}</MenuItem>
-                  ))}
+                  {industries.map(i => <MenuItem key={i} value={i}>{i}</MenuItem>)}
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6} md={4}>
               <TextField
-                fullWidth
-                multiline
-                rows={3}
-                label="Company Description"
-                value={profileForm.description}
-                onChange={(e) => setProfileForm({...profileForm, description: e.target.value})}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Phone"
-                value={profileForm.phone}
-                onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Email"
-                value={profileForm.email}
-                onChange={(e) => setProfileForm({...profileForm, email: e.target.value})}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Website"
-                value={profileForm.website}
-                onChange={(e) => setProfileForm({...profileForm, website: e.target.value})}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
                 label="Year Established"
+                fullWidth
                 type="number"
                 value={profileForm.yearEstablished}
-                onChange={(e) => setProfileForm({...profileForm, yearEstablished: e.target.value})}
+                onChange={(e) => setProfileForm({ ...profileForm, yearEstablished: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth>
                 <InputLabel>Number of Employees</InputLabel>
                 <Select
                   value={profileForm.numberOfEmployees}
-                  onChange={(e) => setProfileForm({...profileForm, numberOfEmployees: e.target.value})}
                   label="Number of Employees"
+                  onChange={(e) => setProfileForm({ ...profileForm, numberOfEmployees: e.target.value })}
                 >
-                  {employeeRanges.map((range) => (
-                    <MenuItem key={range} value={range}>{range}</MenuItem>
-                  ))}
+                  {employeeRanges.map(r => <MenuItem key={r} value={r}>{r}</MenuItem>)}
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth>
                 <InputLabel>Annual Turnover</InputLabel>
                 <Select
                   value={profileForm.annualTurnover}
-                  onChange={(e) => setProfileForm({...profileForm, annualTurnover: e.target.value})}
                   label="Annual Turnover"
+                  onChange={(e) => setProfileForm({ ...profileForm, annualTurnover: e.target.value })}
                 >
-                  {turnoverRanges.map((range) => (
-                    <MenuItem key={range} value={range}>{range}</MenuItem>
-                  ))}
+                  {turnoverRanges.map(r => <MenuItem key={r} value={r}>{r}</MenuItem>)}
                 </Select>
               </FormControl>
             </Grid>
-            
-            {/* Business Address Section */}
-            <Grid item xs={12}>
-              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Business Address</Typography>
+            <Grid item xs={12} md={4}>
+              <TextField
+                label="Website URL"
+                fullWidth
+                value={profileForm.website}
+                onChange={(e) => setProfileForm({ ...profileForm, website: e.target.value })}
+              />
             </Grid>
+
             <Grid item xs={12}>
               <TextField
+                label="Company Description (Max 500 characters)"
                 fullWidth
-                label="Address"
+                multiline
+                rows={3}
+                value={profileForm.description}
+                onChange={(e) => setProfileForm({ ...profileForm, description: e.target.value })}
+                inputProps={{ maxLength: 500 }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={4}>
+              <TextField
+                label="GST Number"
+                fullWidth
+                value={profileForm.gstNumber}
+                onChange={(e) => setProfileForm({ ...profileForm, gstNumber: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <TextField
+                label="PAN Number"
+                fullWidth
+                value={profileForm.panNumber}
+                onChange={(e) => setProfileForm({ ...profileForm, panNumber: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <TextField
+                label="Phone Number"
+                fullWidth
+                value={profileForm.phone}
+                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={4}>
+              <TextField
+                label="Company Email"
+                fullWidth
+                type="email"
+                value={profileForm.email}
+                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+              />
+            </Grid>
+
+            {/* Address Fields */}
+            <Grid item xs={12}>
+              <Divider sx={{ my: 1 }}>Address</Divider>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Street Address / Locality"
+                fullWidth
                 value={profileForm.address}
-                onChange={(e) => setProfileForm({...profileForm, address: e.target.value})}
-                placeholder="Enter your business address"
+                onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} sm={6} md={2}>
               <TextField
-                fullWidth
                 label="City"
+                fullWidth
                 value={profileForm.city}
-                onChange={(e) => setProfileForm({...profileForm, city: e.target.value})}
-                placeholder="Enter city"
+                onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
               />
             </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                fullWidth
-                label="State"
-                value={profileForm.state}
-                onChange={(e) => setProfileForm({...profileForm, state: e.target.value})}
-                placeholder="Enter state"
-              />
+            <Grid item xs={12} sm={6} md={2}>
+              <FormControl fullWidth>
+                <InputLabel>State</InputLabel>
+                <Select
+                  value={profileForm.state}
+                  label="State"
+                  onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
+                >
+                  {states.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                </Select>
+              </FormControl>
             </Grid>
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} sm={6} md={2}>
               <TextField
-                fullWidth
                 label="Pincode"
+                fullWidth
                 value={profileForm.pincode}
-                onChange={(e) => setProfileForm({...profileForm, pincode: e.target.value})}
-                placeholder="Enter pincode"
+                onChange={(e) => setProfileForm({ ...profileForm, pincode: e.target.value })}
               />
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditProfileDialog(false)}>Cancel</Button>
-          <Button onClick={companyData ? handleUpdateProfile : handleCreateProfile} variant="contained">
-            {companyData ? 'Update Profile' : 'Create Profile'}
+          <Button onClick={() => setEditProfileDialog(false)} color="secondary" disabled={dialogLoading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleUpdateProfile}
+            variant="contained"
+            color="primary"
+            disabled={dialogLoading}
+            startIcon={dialogLoading && <CircularProgress size={20} color="inherit" />}
+          >
+            {dialogLoading ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Upload Document Dialog */}
       <Dialog open={uploadDocDialog} onClose={() => setUploadDocDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Upload Document</DialogTitle>
+        <DialogTitle>Upload Company Document</DialogTitle>
         <DialogContent>
-          <FormControl fullWidth sx={{ mb: 3, mt: 1 }}>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Mandatory documents (GST, PAN) help increase your Trust Score. Max file size 5MB (PDF/JPG/PNG).
+          </Alert>
+          <FormControl fullWidth sx={{ mb: 2 }} required>
             <InputLabel>Document Type</InputLabel>
             <Select
               value={documentType}
-              onChange={(e) => setDocumentType(e.target.value)}
               label="Document Type"
+              onChange={(e) => setDocumentType(e.target.value)}
             >
-              {documentTypes.map((type) => (
-                <MenuItem key={type} value={type}>{type}</MenuItem>
-              ))}
+              {documentTypes.map(type => <MenuItem key={type} value={type}>{type}</MenuItem>)}
             </Select>
           </FormControl>
-          
-          <input
-            accept=".pdf,.jpg,.jpeg,.png"
-            style={{ display: 'none' }}
-            id="document-upload"
-            type="file"
-            onChange={handleFileUpload}
-          />
-          <label htmlFor="document-upload">
-            <Button variant="outlined" component="span" fullWidth sx={{ mb: 2 }}>
-              <PhotoCamera sx={{ mr: 1 }} />
-              Choose File
-            </Button>
-          </label>
-          
-          {selectedFile && (
-            <Typography variant="body2" color="textSecondary">
-              Selected: {selectedFile.name}
-            </Typography>
-          )}
+          <Box sx={{ border: '2px dashed', borderColor: 'grey.300', p: 3, textAlign: 'center' }}>
+            <input
+              accept=".pdf,.jpg,.jpeg,.png"
+              style={{ display: 'none' }}
+              id="document-upload-button"
+              type="file"
+              onChange={handleFileUpload}
+            />
+            <label htmlFor="document-upload-button">
+              <Button variant="outlined" component="span" startIcon={<Upload />}>
+                {selectedFile ? `Change File: ${selectedFile.name}` : 'Select Document File'}
+              </Button>
+            </label>
+            {selectedFile && (
+              <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                File selected: **{selectedFile.name}**
+              </Typography>
+            )}
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUploadDocDialog(false)}>Cancel</Button>
-          <Button onClick={handleDocumentUpload} variant="contained" disabled={!selectedFile || !documentType}>
-            Upload
+          <Button onClick={() => setUploadDocDialog(false)} color="secondary" disabled={dialogLoading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDocumentUpload}
+            variant="contained"
+            color="primary"
+            disabled={dialogLoading || !selectedFile || !documentType}
+            startIcon={dialogLoading && <CircularProgress size={20} color="inherit" />}
+          >
+            {dialogLoading ? 'Uploading...' : 'Upload Document'}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Buy Credits Dialog */}
-      <Dialog open={buyCreditsDialog} onClose={() => setBuyCreditsDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Purchase Lead Credits</DialogTitle>
+      <Dialog open={buyCreditsDialog} onClose={() => setBuyCreditsDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Buy Lead Credits</DialogTitle>
         <DialogContent>
-          <Alert severity="info" sx={{ mb: 3 }}>
-            Lead credits are used to submit quotes on RFQs. Each quote submission costs 1 credit.
-            <br />Price: ₹25 per credit
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Credits are used to access contact details for new RFQ leads. 1 Credit = ₹1. Minimum purchase is 10 Credits.
           </Alert>
-          
           <TextField
+            label="Credits Amount (Min 10)"
             fullWidth
-            label="Number of Credits"
             type="number"
             value={creditAmount}
             onChange={(e) => setCreditAmount(e.target.value)}
             inputProps={{ min: 10 }}
-            helperText="Minimum purchase: 10 credits"
             sx={{ mb: 2 }}
+            required
           />
-          
-          {creditAmount && (
-            <Typography variant="h6" color="primary">
-              Total Amount: {formatCurrency(parseInt(creditAmount || 0) * 25)}
-            </Typography>
-          )}
+          <Typography variant="h6" sx={{ textAlign: 'right' }}>
+            Total Payment: **{formatCurrency(parseInt(creditAmount) || 0)}**
+          </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setBuyCreditsDialog(false)}>Cancel</Button>
-          <Button onClick={handleBuyCredits} variant="contained" disabled={!creditAmount}>
-            Purchase Credits
+          <Button onClick={() => setBuyCreditsDialog(false)} color="secondary" disabled={dialogLoading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleBuyCredits}
+            variant="contained"
+            color="primary"
+            disabled={dialogLoading || parseInt(creditAmount) < 10}
+            startIcon={dialogLoading && <CircularProgress size={20} color="inherit" />}
+          >
+            {dialogLoading ? 'Processing...' : `Pay ${formatCurrency(parseInt(creditAmount) || 0)}`}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1025,9 +1136,10 @@ const CompanyDashboard = () => {
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={() => setSnackbar({...snackbar, open: false})}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar({...snackbar, open: false})}>
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%' }}>
           {snackbar.message}
         </Alert>
       </Snackbar>
