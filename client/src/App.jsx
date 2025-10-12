@@ -18,6 +18,7 @@ import PasswordReset from './pages/PasswordReset';
 import Analytics from './pages/Analytics';
 import Wallet from './pages/Wallet';
 import CompanyDashboard from './pages/CompanyDashboard';
+import Help from './pages/Help';
 import { checkAuth } from './services/authService';
 import { login, logout } from './store/slices/authSlice';
 import theme from './theme';
@@ -120,7 +121,7 @@ const App = () => {
             <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
             <Route path="/company" element={<ProtectedRoute><CompanyDashboard /></ProtectedRoute>} />
             <Route path="/company-dashboard" element={<Navigate to="/company" replace />} />
-            
+            <Route path="/faq" element={<Help />} />
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
