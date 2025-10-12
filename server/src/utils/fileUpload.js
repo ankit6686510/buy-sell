@@ -1,4 +1,5 @@
 import multer from 'multer';
+import sharp from 'sharp';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import { v2 as cloudinary } from 'cloudinary';
 
@@ -53,6 +54,60 @@ export const deleteFile = async (publicId) => {
     console.error('Error deleting file from Cloudinary:', error);
     return false;
   }
+};
+
+export const uploadToCloudinary = async (fileBuffer, baseName = 'image') => {
+  const sizes = [
+    { name: 'thumbnail', width: 150 },
+    { name: 'medium', width: 600 },
+    { name: 'large', width: 1200 },
+  ];
+
+  const uploadResults = {};
+
+  for (const size of sizes) {
+    const resizedBuffer = await sharp(fileBuffer)
+      .resize(size.width)
+      .toFormat('webp', { quality: 80 })
+      .toBuffer();
+
+    const uniqueId = `${baseName}-${size.name}-${Date.now()}`;
+    const uploaded = await cloudinary.uploader.upload_stream(
+      {
+        folder: 'SecondMarket/earbuds',
+        format: 'webp',
+        public_id: uniqueId,
+        resource_type: 'image',
+      },
+      (error, result) => {
+        if (error) {
+          console.error('Upload error:', error);
+          throw error;
+        }
+        return result;
+      }
+    );
+
+    const uploadedPromise = new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'SecondMarket/earbuds',
+          format: 'webp',
+          public_id: uniqueId,
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      stream.end(resizedBuffer);
+    });
+
+    const result = await uploadedPromise;
+    uploadResults[size.name] = result.secure_url;
+  }
+
+  return uploadResults;
 };
 
 export { cloudinary };
