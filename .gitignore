@@ -46,6 +46,11 @@ Thumbs.db
 yarn.lock
 */yarn.lock
 
+# Security - Never commit authentication files
+cookies.txt
+*.cookies
+session*
+
 # Cloudinary storage folders
 uploads/ 
 # Logs
