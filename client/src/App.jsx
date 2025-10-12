@@ -1,7 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { ThemeProvider, CssBaseline, CircularProgress, Box } from '@mui/material';
+import {
+  ThemeProvider,
+  CssBaseline,
+  CircularProgress,
+  Box,
+  createTheme,
+} from '@mui/material';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import Home from './pages/Home';
@@ -15,35 +21,60 @@ import Listings from './pages/Listings';
 import Messages from './pages/Messages';
 import NotFound from './pages/NotFound';
 import PasswordReset from './pages/PasswordReset';
-import Analytics from './pages/Analytics';
-import Wallet from './pages/Wallet';
-import CompanyDashboard from './pages/CompanyDashboard';
-import Help from './pages/Help';
 import { checkAuth } from './services/authService';
 import { login, logout } from './store/slices/authSlice';
-import theme from './theme';
+import { getAppTheme } from './theme'; // 🌟 THIS IS THE CORRECTED LINE
 
 // Protected route wrapper
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useSelector(state => state.auth);
+  const { isAuthenticated, loading } = useSelector((state) => state.auth);
   const location = useLocation();
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+        }}
+      >
         <CircularProgress />
       </Box>
     );
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" state={{ from: location }} replace />;
+  return isAuthenticated ? (
+    children
+  ) : (
+    <Navigate to="/login" state={{ from: location }} replace />
+  );
 };
 
 const App = () => {
   const dispatch = useDispatch();
   const location = useLocation();
-  const { isAuthenticated, loading, user } = useSelector(state => state.auth);
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
   const [isInitializing, setIsInitializing] = useState(true);
+
+  // 🌙 Manage theme mode
+  const [mode, setMode] = useState(localStorage.getItem('themeMode') || 'light');
+
+  const colorMode = useMemo(
+    () => ({
+      toggleColorMode: () => {
+        setMode((prevMode) => {
+          const newMode = prevMode === 'light' ? 'dark' : 'light';
+          localStorage.setItem('themeMode', newMode);
+          return newMode;
+        });
+      },
+    }),
+    []
+  );
+
+  const theme = useMemo(() => createTheme(getAppTheme(mode)), [mode]);
 
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -65,15 +96,13 @@ const App = () => {
     checkAuthStatus();
   }, [dispatch]);
 
-  // Initialize socket connection if user is authenticated
+  // Initialize socket connection
   useEffect(() => {
     if (isAuthenticated && user && !isInitializing) {
-      // Import dynamically to avoid circular dependency issues
       import('./services/socketService').then(({ initializeSocket }) => {
         initializeSocket(user._id, dispatch);
       });
-      
-      // Cleanup socket on unmount
+
       return () => {
         import('./services/socketService').then(({ disconnectSocket }) => {
           disconnectSocket();
@@ -84,7 +113,14 @@ const App = () => {
 
   if (isInitializing) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -94,35 +130,73 @@ const App = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <div className="app">
-        <Header />
+        <Header colorMode={colorMode} mode={mode} />
         <main className="main-content">
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Home />} />
-            <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" />} />
-            <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to="/" />} />
+            <Route
+              path="/login"
+              element={!isAuthenticated ? <Login /> : <Navigate to="/" />}
+            />
+            <Route
+              path="/register"
+              element={!isAuthenticated ? <Register /> : <Navigate to="/" />}
+            />
             <Route path="/forgot-password" element={<PasswordReset />} />
             <Route path="/reset-password/:token" element={<PasswordReset />} />
-            
-            {/* Listings routes */}
+
+            {/* Listings */}
             <Route path="/listings" element={<Listings />} />
             <Route path="/listings/:id" element={<ListingDetail />} />
-            
+
             {/* Protected routes */}
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/listings/create" element={<ProtectedRoute><CreateListing /></ProtectedRoute>} />
-            <Route path="/create-listing" element={<Navigate to="/listings/create" replace />} />
-            <Route path="/listings/edit/:id" element={<ProtectedRoute><EditListing /></ProtectedRoute>} />
-            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-            <Route path="/messages/:chatId" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-            
-            {/* Business & Analytics routes */}
-            <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-            <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
-            <Route path="/company" element={<ProtectedRoute><CompanyDashboard /></ProtectedRoute>} />
-            <Route path="/company-dashboard" element={<Navigate to="/company" replace />} />
-            <Route path="/faq" element={<Help />} />
-            {/* Catch-all route */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/listings/create"
+              element={
+                <ProtectedRoute>
+                  <CreateListing />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/create-listing"
+              element={<Navigate to="/listings/create" replace />}
+            />
+            <Route
+              path="/listings/edit/:id"
+              element={
+                <ProtectedRoute>
+                  <EditListing />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/messages"
+              element={
+                <ProtectedRoute>
+                  <Messages />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/messages/:chatId"
+              element={
+                <ProtectedRoute>
+                  <Messages />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>

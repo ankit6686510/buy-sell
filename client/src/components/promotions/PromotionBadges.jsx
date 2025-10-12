@@ -5,6 +5,8 @@ import {
   Tooltip,
   Typography,
   keyframes,
+  useTheme, // <-- Added useTheme
+  alpha,    // <-- Added alpha for opacity control
 } from '@mui/material';
 import {
   Visibility,
@@ -15,38 +17,25 @@ import {
   AutoAwesome,
 } from '@mui/icons-material';
 
-// Animation for urgent badge
+// --- Animations ---
 const pulseAnimation = keyframes`
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.85; }
+  100% { transform: scale(1); opacity: 1; }
 `;
 
-// Animation for spotlight badge
 const shimmerAnimation = keyframes`
-  0% {
-    background-position: -200% center;
-  }
-  100% {
-    background-position: 200% center;
-  }
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
 `;
 
-// Promotion badge configurations
-const PROMOTION_CONFIGS = {
+// --- Promotion Configs (Using Theme-Based Colors for Consistency) ---
+// Note: Gradients still use hex for precise control, but base color is now derived from theme for other styling.
+const getPromotionConfigs = (theme) => ({
   spotlight: {
     icon: Visibility,
     label: 'Spotlight',
-    color: '#f59e0b',
+    color: theme.palette.warning.main, // Primary color for Yellow/Gold
     gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
     description: 'Featured in spotlight section',
     animation: shimmerAnimation,
@@ -54,7 +43,7 @@ const PROMOTION_CONFIGS = {
   top_ads: {
     icon: TrendingUp,
     label: 'Top Ad',
-    color: '#3b82f6',
+    color: theme.palette.info.main, // Primary color for Blue
     gradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
     description: 'Premium placement at top',
     animation: null,
@@ -62,7 +51,7 @@ const PROMOTION_CONFIGS = {
   urgent: {
     icon: FlashOn,
     label: 'Urgent',
-    color: '#ef4444',
+    color: theme.palette.error.main, // Primary color for Red
     gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
     description: 'Quick sale needed',
     animation: pulseAnimation,
@@ -70,14 +59,14 @@ const PROMOTION_CONFIGS = {
   featured_plus: {
     icon: EmojiEvents,
     label: 'Featured+',
-    color: '#8b5cf6',
+    color: theme.palette.secondary.main, // Using secondary for Purple
     gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
     description: 'Premium featured listing',
     animation: null,
   },
-};
+});
 
-// Individual promotion badge component
+// --- Individual Promotion Badge Component ---
 export const PromotionBadge = ({ 
   type, 
   size = 'medium', 
@@ -85,42 +74,57 @@ export const PromotionBadge = ({
   showIcon = true,
   showLabel = true 
 }) => {
+  const theme = useTheme();
+  const PROMOTION_CONFIGS = getPromotionConfigs(theme);
+
   if (!type || type === 'none' || !PROMOTION_CONFIGS[type]) return null;
 
   const config = PROMOTION_CONFIGS[type];
   const IconComponent = config.icon;
 
   const sizeProps = {
-    small: { height: 20, fontSize: '0.65rem', iconSize: 14 },
-    medium: { height: 24, fontSize: '0.75rem', iconSize: 16 },
-    large: { height: 28, fontSize: '0.85rem', iconSize: 18 },
+    small: { height: 20, fontSize: '0.65rem', iconSize: 14, borderRadius: 1.5 },
+    medium: { height: 24, fontSize: '0.75rem', iconSize: 16, borderRadius: 2 },
+    large: { height: 28, fontSize: '0.85rem', iconSize: 18, borderRadius: 2.5 },
   };
+  
+  const { height, fontSize, iconSize, borderRadius } = sizeProps[size];
 
+  // --- Variant: Chip ---
   if (variant === 'chip') {
     return (
       <Tooltip title={config.description} arrow>
         <Chip
-          icon={showIcon ? <IconComponent sx={{ fontSize: sizeProps[size].iconSize }} /> : undefined}
+          icon={showIcon ? <IconComponent sx={{ fontSize: iconSize }} /> : undefined}
           label={showLabel ? config.label : ''}
           size={size === 'large' ? 'medium' : 'small'}
           sx={{
             background: config.gradient,
-            color: 'white',
+            color: 'white', // Ensure high contrast white text over gradient
             fontWeight: 600,
-            fontSize: sizeProps[size].fontSize,
-            height: sizeProps[size].height,
+            fontSize: fontSize,
+            height: height,
+            borderRadius: borderRadius, // Use dynamic border radius
             animation: config.animation && `${config.animation} 2s infinite`,
+            // Dark mode subtle elevation via shadow
+            boxShadow: `0 2px 8px ${alpha(config.color, theme.palette.mode === 'dark' ? 0.3 : 0.6)}`,
+            border: `1px solid ${alpha(config.color, 0.4)}`, // Subtle, defined border
+            transition: 'all 0.3s',
+            
             '& .MuiChip-icon': {
               color: 'white',
             },
-            boxShadow: `0 2px 8px ${config.color}40`,
-            border: `1px solid ${config.color}20`,
+            '&:hover': {
+                transform: 'translateY(-1px) scale(1.02)', // Micro-interaction on hover
+                boxShadow: `0 4px 12px ${alpha(config.color, theme.palette.mode === 'dark' ? 0.4 : 0.7)}`,
+            }
           }}
         />
       </Tooltip>
     );
   }
 
+  // --- Variant: Banner (For image overlays) ---
   if (variant === 'banner') {
     return (
       <Box
@@ -133,54 +137,63 @@ export const PromotionBadge = ({
           color: 'white',
           px: 1.5,
           py: 0.5,
-          borderRadius: '8px',
+          borderRadius: '6px',
           display: 'flex',
           alignItems: 'center',
           gap: 0.5,
-          fontSize: sizeProps[size].fontSize,
+          fontSize: fontSize,
           fontWeight: 600,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          // Use a theme-aware shadow
+          boxShadow: theme.shadows[4], 
           animation: config.animation && `${config.animation} 2s infinite`,
         }}
       >
-        {showIcon && <IconComponent sx={{ fontSize: sizeProps[size].iconSize }} />}
+        {showIcon && <IconComponent sx={{ fontSize: iconSize }} />}
         {showLabel && config.label}
       </Box>
     );
   }
 
+  // --- Variant: Corner (Ribbon effect) ---
   if (variant === 'corner') {
     return (
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          zIndex: 3,
-          width: 0,
-          height: 0,
-          borderLeft: '40px solid transparent',
-          borderTop: `40px solid ${config.color}`,
-        }}
-      >
-        <IconComponent
+      <Tooltip title={config.description} arrow>
+        <Box
           sx={{
             position: 'absolute',
-            top: -35,
-            right: -8,
-            fontSize: 16,
-            color: 'white',
-            transform: 'rotate(45deg)',
+            top: 0,
+            right: 0,
+            zIndex: 3,
+            width: 0,
+            height: 0,
+            // Uses the primary color config.color
+            borderLeft: '40px solid transparent',
+            borderTop: `40px solid ${config.color}`,
+            transition: 'all 0.3s',
+            '&:hover': {
+                filter: 'brightness(1.1)' // Slight brightness change on hover
+            }
           }}
-        />
-      </Box>
+        >
+          <IconComponent
+            sx={{
+              position: 'absolute',
+              top: -35,
+              right: -8,
+              fontSize: 16,
+              color: 'white', // White icon for contrast
+              transform: 'rotate(45deg)',
+            }}
+          />
+        </Box>
+      </Tooltip>
     );
   }
 
   return null;
 };
 
-// Multiple promotion badges container
+// --- Multiple Promotion Badges Container ---
 export const PromotionBadges = ({ 
   promotions = [], 
   maxBadges = 2,
@@ -208,39 +221,49 @@ export const PromotionBadges = ({
           type={promotion.type}
           size={size}
           variant={variant}
+          // Only show icon on the first badge if multiple exist, for cleaner look
+          showIcon={index === 0 || activeBadges.length === 1}
         />
       ))}
     </Box>
   );
 };
 
-// Enhanced listing card overlay for promoted listings
+// --- Enhanced Listing Card Overlay for Promoted Listings ---
 export const PromotionOverlay = ({ promotion, children }) => {
+  const theme = useTheme();
+  const PROMOTION_CONFIGS = getPromotionConfigs(theme);
+
   if (!promotion || promotion.type === 'none') return children;
 
   const config = PROMOTION_CONFIGS[promotion.type];
   if (!config) return children;
 
+  // Reduced border radius for a cleaner card look
+  const borderRadius = '12px'; 
+
   return (
     <Box sx={{ position: 'relative' }}>
       {children}
       
-      {/* Promotion glow effect */}
+      {/* 1. Promotion glow effect (Subtle, theme-aware outer glow) */}
       <Box
         sx={{
           position: 'absolute',
-          top: -2,
-          left: -2,
-          right: -2,
-          bottom: -2,
-          borderRadius: '26px',
-          background: `linear-gradient(135deg, ${config.color}40, transparent, ${config.color}40)`,
-          zIndex: -1,
-          opacity: 0.6,
+          top: -1, // Reduced size for subtlety
+          left: -1,
+          right: -1,
+          bottom: -1,
+          borderRadius: borderRadius,
+          // Faded background effect for the glow
+          background: `linear-gradient(135deg, ${alpha(config.color, 0.2)} 0%, transparent 50%, ${alpha(config.color, 0.2)} 100%)`,
+          zIndex: 0, // Changed from -1 to 0 to sit *over* the main card's background, but under the content
+          pointerEvents: 'none',
+          opacity: 0.8, // Increased visibility slightly
         }}
       />
       
-      {/* Premium shine effect for featured+ */}
+      {/* 2. Premium shine effect for featured+ (More pronounced for the highest tier) */}
       {promotion.type === 'featured_plus' && (
         <Box
           sx={{
@@ -249,12 +272,14 @@ export const PromotionOverlay = ({ promotion, children }) => {
             left: 0,
             right: 0,
             bottom: 0,
-            borderRadius: '24px',
-            background: `linear-gradient(45deg, transparent 30%, ${config.color}15 50%, transparent 70%)`,
+            borderRadius: borderRadius,
+            // A subtle shine that moves across the card
+            background: `linear-gradient(45deg, transparent 30%, ${alpha(config.color, 0.1)} 50%, transparent 70%)`,
             backgroundSize: '200% 200%',
             animation: `${shimmerAnimation} 3s infinite`,
             pointerEvents: 'none',
             zIndex: 1,
+            opacity: 0.5, // Subtle visual effect
           }}
         />
       )}
@@ -262,8 +287,11 @@ export const PromotionOverlay = ({ promotion, children }) => {
   );
 };
 
-// Promotion stats component for listing cards
+// --- Promotion Stats Component for Listing Cards ---
 export const PromotionStats = ({ promotion, compact = true }) => {
+  const theme = useTheme();
+  const PROMOTION_CONFIGS = getPromotionConfigs(theme);
+
   if (!promotion || promotion.type === 'none') return null;
 
   const config = PROMOTION_CONFIGS[promotion.type];
@@ -286,10 +314,16 @@ export const PromotionStats = ({ promotion, compact = true }) => {
             color: config.color,
             fontSize: '0.75rem',
             fontWeight: 600,
+            transition: 'color 0.3s',
+            // Subtle pulse for urgent/expiring promotions
+            animation: config.animation && `${config.animation} 2s infinite`,
+            '&:hover': {
+                color: alpha(config.color, 0.8),
+            }
           }}
         >
           <IconComponent sx={{ fontSize: 14 }} />
-          <Typography variant="caption">
+          <Typography variant="caption" sx={{ lineHeight: 1.2 }}>
             {timeLeft}d left
           </Typography>
         </Box>
@@ -297,38 +331,49 @@ export const PromotionStats = ({ promotion, compact = true }) => {
     );
   }
 
+  // Full Stats Banner
   return (
     <Box
       sx={{
         display: 'flex',
         alignItems: 'center',
         gap: 1,
-        p: 1,
-        borderRadius: '8px',
-        background: `${config.color}10`,
-        border: `1px solid ${config.color}30`,
+        p: 1.5,
+        borderRadius: '10px',
+        // Theme-aware, subtle background
+        background: alpha(config.color, theme.palette.mode === 'dark' ? 0.05 : 0.1),
+        border: `1px solid ${alpha(config.color, theme.palette.mode === 'dark' ? 0.3 : 0.4)}`,
       }}
     >
-      <IconComponent sx={{ fontSize: 16, color: config.color }} />
+      <IconComponent sx={{ fontSize: 20, color: config.color }} />
       <Box>
-        <Typography variant="caption" sx={{ fontWeight: 600, color: config.color }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700, color: config.color }}>
           {config.label}
         </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-          {timeLeft} days remaining
+        <Typography variant="body2" color="text.secondary" sx={{ display: 'block' }}>
+          {config.description} ({timeLeft} days remaining)
         </Typography>
       </Box>
     </Box>
   );
 };
 
-// Promotion action button for listing management
+// --- Promotion Action Button for Listing Management ---
 export const PromotionActionButton = ({ 
   hasPromotion, 
   onClick,
   size = 'small',
   variant = 'outlined' 
 }) => {
+  const theme = useTheme();
+  
+  // Use theme colors for the primary button appearance
+  const primaryColor = theme.palette.primary.main;
+  const primaryDark = theme.palette.primary.dark;
+  
+  // Custom gradient for the promoted state
+  const promotedGradient = `linear-gradient(135deg, ${primaryColor} 0%, ${primaryDark} 100%)`;
+
   return (
     <Tooltip title={hasPromotion ? 'Manage promotion' : 'Promote this listing'} arrow>
       <Chip
@@ -339,20 +384,40 @@ export const PromotionActionButton = ({
         size={size}
         sx={{
           cursor: 'pointer',
-          background: hasPromotion 
-            ? 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)'
-            : 'transparent',
-          color: hasPromotion ? 'white' : '#6366f1',
-          borderColor: '#6366f1',
           fontWeight: 600,
-          '&:hover': {
-            background: hasPromotion 
-              ? 'linear-gradient(135deg, #4338ca 0%, #3730a3 100%)'
-              : 'rgba(99, 102, 241, 0.1)',
-          },
-          '& .MuiChip-icon': {
-            color: hasPromotion ? 'white' : '#6366f1',
-          },
+          transition: 'all 0.3s',
+          
+          // --- Promoted State (Contained Gradient) ---
+          ...(hasPromotion && {
+            background: promotedGradient,
+            color: 'white',
+            borderColor: 'transparent',
+            boxShadow: theme.shadows[3],
+            '&:hover': {
+              background: promotedGradient, // Keep gradient on hover
+              opacity: 0.9,
+              transform: 'translateY(-1px)',
+              boxShadow: theme.shadows[6],
+            },
+            '& .MuiChip-icon': {
+              color: 'white',
+            },
+          }),
+          
+          // --- Default State (Outlined) ---
+          ...(!hasPromotion && {
+            color: primaryColor,
+            borderColor: primaryColor,
+            background: 'transparent',
+            '&:hover': {
+              background: alpha(primaryColor, theme.palette.mode === 'dark' ? 0.1 : 0.05),
+              borderColor: primaryColor,
+              transform: 'translateY(-1px)',
+            },
+            '& .MuiChip-icon': {
+              color: primaryColor,
+            },
+          }),
         }}
       />
     </Tooltip>

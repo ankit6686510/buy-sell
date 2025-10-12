@@ -22,19 +22,23 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-import { 
-  getListingById, 
-  updateListing 
+import {
+  getListingById,
+  updateListing
 } from '../services/listingService';
-import { 
-  fetchListingStart, 
-  fetchListingSuccess, 
+import {
+  fetchListingStart,
+  fetchListingSuccess,
   fetchListingFailure,
   updateListingStart,
   updateListingSuccess,
   updateListingFailure,
 } from '../store/slices/listingSlice';
 import { uploadMultipleImages } from '../services/uploadService';
+
+// --- CONFIGURATION & VALIDATION ---
+const MAX_IMAGES = 10;
+const MAX_FILE_SIZE_MB = 5; // 5MB per file
 
 const validationSchema = Yup.object({
   brand: Yup.string().required('Brand is required'),
@@ -45,37 +49,39 @@ const validationSchema = Yup.object({
     .required('Price is required')
     .positive('Price must be positive'),
   location: Yup.string().required('Location is required'),
-  description: Yup.string(),
+  description: Yup.string().min(10, 'Description should be at least 10 characters'),
 });
 
 const EditListing = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { loading: listingLoading, error } = useSelector((state) => state.listings);
+  // Using a single variable for overall form submission/data fetching loading state
+  const { loading: isSubmitting, error } = useSelector((state) => state.listings);
   const { user } = useSelector((state) => state.auth);
-  
+
   const [initialValues, setInitialValues] = useState(null);
   const [unauthorized, setUnauthorized] = useState(false);
   const [uploadError, setUploadError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [listingLoading, setListingLoading] = useState(true); // Specific loading for initial data fetch
   const [uploadedImages, setUploadedImages] = useState([]);
   const [uploadingImage, setUploadingImage] = useState(false);
-  
+
+  // --- EFFECT: FETCH LISTING DATA ---
   useEffect(() => {
     const fetchListing = async () => {
-      setLoading(true);
+      setListingLoading(true);
       try {
         dispatch(fetchListingStart());
         const data = await getListingById(id);
         dispatch(fetchListingSuccess(data.listing));
-        
-        // Check if user is the owner of the listing
+
+        // Authorization Check
         if (user && data.listing.seller && user._id !== data.listing.seller._id) {
           setUnauthorized(true);
           return;
         }
-        
+
         // Set initial values from listing data
         const initialData = {
           brand: data.listing.brand,
@@ -87,12 +93,13 @@ const EditListing = () => {
           description: data.listing.description || '',
         };
         setInitialValues(initialData);
-        
-        // Set uploaded images
+
+        // Set uploaded images (assuming server returns full URLs)
         if (data.listing.images && data.listing.images.length > 0) {
           const formattedImages = data.listing.images.map(imageUrl => ({
             url: imageUrl,
-            publicId: imageUrl.split('/').pop().split('.')[0] // Extract public ID from URL
+            // Simple placeholder for public ID extraction (needs robust server logic)
+            publicId: imageUrl.split('/').pop().split('.')[0]
           }));
           setUploadedImages(formattedImages);
         } else {
@@ -101,65 +108,91 @@ const EditListing = () => {
       } catch (err) {
         dispatch(fetchListingFailure(err.message || 'Failed to fetch listing'));
       } finally {
-        setLoading(false);
+        setListingLoading(false);
       }
     };
-    
+
     fetchListing();
   }, [id, dispatch, user?._id, user?.location]);
-  
+
+  // --- HANDLER: IMAGE UPLOAD ---
   const handleImageUpload = async (event) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
+    const currentTotal = uploadedImages.length;
+    const filesToUpload = Array.from(files).slice(0, MAX_IMAGES - currentTotal);
+    const totalNewImages = filesToUpload.length;
+
+    // Client-Side Validation
+    if (currentTotal >= MAX_IMAGES) {
+      setUploadError(`You have reached the maximum limit of ${MAX_IMAGES} images.`);
+      event.target.value = null;
+      return;
+    }
+    const oversizedFiles = filesToUpload.filter(file => file.size > MAX_FILE_SIZE_MB * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      setUploadError(`One or more files exceed the ${MAX_FILE_SIZE_MB}MB size limit.`);
+      event.target.value = null;
+      return;
+    }
+
     setUploadingImage(true);
     setUploadError(null);
     try {
-      const result = await uploadMultipleImages(Array.from(files));
-      
+      const result = await uploadMultipleImages(filesToUpload);
+
       const newImages = result.images.map(image => ({
         url: image.url,
         publicId: image.publicId
       }));
-      
-      setUploadedImages([...uploadedImages, ...newImages]);
+
+      setUploadedImages(prevImages => [...prevImages, ...newImages]);
+
+      if (files.length > totalNewImages) {
+          setUploadError(`Only ${totalNewImages} of ${files.length} images were uploaded due to the ${MAX_IMAGES} limit.`);
+      }
     } catch (error) {
       console.error('Error uploading images:', error);
-      setUploadError(error.message || 'Failed to upload images');
+      setUploadError(error.message || 'Failed to upload images. Check file format and size.');
     } finally {
       setUploadingImage(false);
+      event.target.value = null; // Clear input for re-uploading same file
     }
   };
-  
+
+  // --- HANDLER: REMOVE IMAGE ---
   const handleRemoveImage = (index) => {
-    const newImages = [...uploadedImages];
-    newImages.splice(index, 1);
+    const newImages = uploadedImages.filter((_, i) => i !== index);
     setUploadedImages(newImages);
   };
-  
+
+  // --- HANDLER: FORM SUBMISSION ---
   const handleSubmit = async (values, { setSubmitting }) => {
+    if (uploadedImages.length === 0) {
+        setUploadError('Please include at least one image for your listing.');
+        setSubmitting(false);
+        return;
+    }
+
     try {
-      // Include user's location from profile if not specified
-      if (!values.location && user?.location) {
-        values.location = user.location;
-      }
-      
       // Add the uploaded images to the form values
       values.images = uploadedImages.map(img => img.url);
-      
+
       dispatch(updateListingStart());
       const response = await updateListing(id, values);
       dispatch(updateListingSuccess(response.listing));
-      
+
       navigate(`/listings/${id}`);
     } catch (err) {
-      dispatch(updateListingFailure(err.message || 'Failed to update listing'));
+      dispatch(updateListingFailure(err.response?.data?.message || err.message || 'Failed to update listing'));
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) {
+  // --- RENDER: LOADING STATE ---
+  if (listingLoading || !initialValues) {
     return (
       <Container sx={{ py: 5 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center' }}>
@@ -168,16 +201,17 @@ const EditListing = () => {
       </Container>
     );
   }
-  
+
+  // --- RENDER: UNAUTHORIZED STATE ---
   if (unauthorized) {
     return (
       <Container sx={{ py: 5 }}>
         <Alert severity="error">
-          You are not authorized to edit this listing.
+          You are **not authorized** to edit this listing. Only the original seller can make changes.
         </Alert>
-        <Button 
-          variant="contained" 
-          sx={{ mt: 2 }} 
+        <Button
+          variant="contained"
+          sx={{ mt: 2 }}
           onClick={() => navigate(-1)}
         >
           Go Back
@@ -185,15 +219,16 @@ const EditListing = () => {
       </Container>
     );
   }
-  
-  if (error) {
+
+  // --- RENDER: FETCH ERROR STATE ---
+  if (error && !isSubmitting) {
     return (
       <Container>
         <Alert severity="error" sx={{ mt: 3 }}>
-          {error}
+          **Error loading listing:** {error}
         </Alert>
-        <Button 
-          onClick={() => navigate(-1)} 
+        <Button
+          onClick={() => navigate(-1)}
           sx={{ mt: 2 }}
         >
           Go Back
@@ -202,28 +237,31 @@ const EditListing = () => {
     );
   }
 
+  // --- RENDER: MAIN FORM ---
   return (
-    <Container maxWidth="md">
-      <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
-        <Typography variant="h4" component="h1" className="form-title">
-          Edit Listing
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 }, mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          **Edit Listing** 🛠️
         </Typography>
-        
-        {error && (
+
+        {/* Form Submission Error */}
+        {error && isSubmitting && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
         )}
-        
+
         <Formik
           initialValues={initialValues}
           validationSchema={validationSchema}
           onSubmit={handleSubmit}
-          enableReinitialize
+          enableReinitialize // Important for updating when initialValues change
         >
-          {({ errors, touched, isSubmitting, setFieldValue }) => (
+          {({ errors, touched, values, setFieldValue }) => (
             <Form>
               <Grid container spacing={3}>
+                {/* Brand */}
                 <Grid item xs={12} sm={6}>
                   <Field
                     as={TextField}
@@ -234,10 +272,11 @@ const EditListing = () => {
                     variant="outlined"
                     error={touched.brand && Boolean(errors.brand)}
                     helperText={touched.brand && errors.brand}
-                    disabled={listingLoading}
+                    disabled={isSubmitting}
                   />
                 </Grid>
-                
+
+                {/* Model */}
                 <Grid item xs={12} sm={6}>
                   <Field
                     as={TextField}
@@ -248,16 +287,17 @@ const EditListing = () => {
                     variant="outlined"
                     error={touched.model && Boolean(errors.model)}
                     helperText={touched.model && errors.model}
-                    disabled={listingLoading}
+                    disabled={isSubmitting}
                   />
                 </Grid>
-                
+
+                {/* Side Select */}
                 <Grid item xs={12} sm={6}>
                   <FormControl
                     fullWidth
                     variant="outlined"
                     error={touched.side && Boolean(errors.side)}
-                    disabled={listingLoading}
+                    disabled={isSubmitting}
                   >
                     <InputLabel id="side-label">Side</InputLabel>
                     <Field
@@ -266,6 +306,8 @@ const EditListing = () => {
                       id="side"
                       name="side"
                       label="Side"
+                      value={values.side || ''} // CRITICAL: Ensure value is set from Formik state
+                      onChange={(event) => setFieldValue('side', event.target.value)}
                     >
                       <MenuItem value="">Select a side</MenuItem>
                       <MenuItem value="left">Left</MenuItem>
@@ -276,13 +318,14 @@ const EditListing = () => {
                     )}
                   </FormControl>
                 </Grid>
-                
+
+                {/* Condition Select */}
                 <Grid item xs={12} sm={6}>
                   <FormControl
                     fullWidth
                     variant="outlined"
                     error={touched.condition && Boolean(errors.condition)}
-                    disabled={listingLoading}
+                    disabled={isSubmitting}
                   >
                     <InputLabel id="condition-label">Condition</InputLabel>
                     <Field
@@ -291,6 +334,8 @@ const EditListing = () => {
                       id="condition"
                       name="condition"
                       label="Condition"
+                      value={values.condition || ''} // CRITICAL: Ensure value is set from Formik state
+                      onChange={(event) => setFieldValue('condition', event.target.value)}
                     >
                       <MenuItem value="">Select condition</MenuItem>
                       <MenuItem value="new">New</MenuItem>
@@ -304,7 +349,8 @@ const EditListing = () => {
                     )}
                   </FormControl>
                 </Grid>
-                
+
+                {/* Price */}
                 <Grid item xs={12} sm={6}>
                   <Field
                     as={TextField}
@@ -317,10 +363,11 @@ const EditListing = () => {
                     InputProps={{ inputProps: { min: 0 } }}
                     error={touched.price && Boolean(errors.price)}
                     helperText={touched.price && errors.price}
-                    disabled={listingLoading}
+                    disabled={isSubmitting}
                   />
                 </Grid>
-                
+
+                {/* Location */}
                 <Grid item xs={12} sm={6}>
                   <Field
                     as={TextField}
@@ -331,30 +378,35 @@ const EditListing = () => {
                     variant="outlined"
                     error={touched.location && Boolean(errors.location)}
                     helperText={touched.location && errors.location}
-                    disabled={listingLoading}
+                    disabled={isSubmitting}
                   />
                 </Grid>
-                
+
+                {/* Description */}
                 <Grid item xs={12}>
                   <Field
                     as={TextField}
                     fullWidth
                     id="description"
                     name="description"
-                    label="Description"
+                    label="Description (Optional)"
                     multiline
                     rows={4}
                     variant="outlined"
                     error={touched.description && Boolean(errors.description)}
                     helperText={touched.description && errors.description}
-                    disabled={listingLoading}
+                    disabled={isSubmitting}
                   />
                 </Grid>
-                
+
+                {/* Image Upload Section */}
                 <Grid item xs={12}>
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle1" gutterBottom>
-                      Images
+                    <Typography variant="h6" gutterBottom>
+                      Product Photos ({uploadedImages.length}/{MAX_IMAGES})
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      You can remove existing photos or upload new ones (Max {MAX_IMAGES} images).
                     </Typography>
                     <input
                       accept="image/*"
@@ -363,36 +415,32 @@ const EditListing = () => {
                       multiple
                       onChange={handleImageUpload}
                       style={{ display: 'none' }}
-                      disabled={listingLoading || uploadingImage}
+                      disabled={isSubmitting || uploadingImage || uploadedImages.length >= MAX_IMAGES}
                     />
                     <label htmlFor="upload-button">
                       <Button
                         variant="outlined"
                         component="span"
-                        disabled={listingLoading || uploadingImage}
+                        disabled={isSubmitting || uploadingImage || uploadedImages.length >= MAX_IMAGES}
                       >
                         {uploadingImage ? <CircularProgress size={24} /> : 'Upload More Images'}
                       </Button>
                     </label>
                   </Box>
-                  
-                  {uploadError && (
-                    <Alert severity="error" sx={{ mt: 1 }}>
-                      {uploadError}
-                    </Alert>
-                  )}
-                  
+
+                  {/* Image Previews */}
                   {uploadedImages.length > 0 && (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
                       {uploadedImages.map((img, index) => (
                         <Box
                           key={index}
-                          sx={{ 
+                          sx={{
                             position: 'relative',
-                            height: 100, 
-                            width: 100, 
+                            height: 100,
+                            width: 100,
                             borderRadius: 1,
-                            overflow: 'hidden'
+                            overflow: 'hidden',
+                            border: '1px solid #ccc',
                           }}
                         >
                           <Box
@@ -407,17 +455,14 @@ const EditListing = () => {
                               position: 'absolute',
                               top: 0,
                               right: 0,
-                              bgcolor: 'rgba(0,0,0,0.3)',
+                              bgcolor: 'rgba(0,0,0,0.5)',
                               color: 'white',
                               '&:hover': {
-                                bgcolor: 'rgba(0,0,0,0.5)',
+                                bgcolor: 'rgba(0,0,0,0.7)',
                               },
-                              minWidth: '30px',
-                              width: '30px',
-                              height: '30px',
-                              p: 0,
                             }}
                             onClick={() => handleRemoveImage(index)}
+                            disabled={isSubmitting}
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>
@@ -425,21 +470,23 @@ const EditListing = () => {
                       ))}
                     </Box>
                   )}
-                  
-                  {touched.images && errors.images && (
-                    <Typography color="error" variant="body2">
-                      {errors.images}
-                    </Typography>
+
+                  {/* Image Upload Error/Warning */}
+                  {uploadError && (
+                    <Alert severity="warning" sx={{ mt: 1 }}>
+                      {uploadError}
+                    </Alert>
                   )}
                 </Grid>
-                
+
+                {/* Action Buttons */}
                 <Grid item xs={12}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
                     <Button
                       variant="outlined"
-                      color="primary"
+                      color="secondary"
                       onClick={() => navigate(-1)}
-                      disabled={listingLoading || isSubmitting}
+                      disabled={isSubmitting}
                     >
                       Cancel
                     </Button>
@@ -447,9 +494,9 @@ const EditListing = () => {
                       type="submit"
                       variant="contained"
                       color="primary"
-                      disabled={listingLoading || isSubmitting || uploadingImage}
+                      disabled={isSubmitting || uploadingImage || uploadedImages.length === 0}
                     >
-                      {listingLoading || isSubmitting ? <CircularProgress size={24} /> : 'Save Changes'}
+                      {isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Save Changes'}
                     </Button>
                   </Box>
                 </Grid>
@@ -462,4 +509,4 @@ const EditListing = () => {
   );
 };
 
-export default EditListing; 
+export default EditListing;

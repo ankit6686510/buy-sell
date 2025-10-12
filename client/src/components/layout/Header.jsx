@@ -19,8 +19,6 @@ import {
   Drawer,
   List,
   ListItem,
-  ListItemButton,
-  ListItemText,
   Divider,
   useScrollTrigger,
   Slide
@@ -34,9 +32,8 @@ import MessageIcon from '@mui/icons-material/Message';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import HomeIcon from '@mui/icons-material/Home';
 import ListIcon from '@mui/icons-material/List';
-import AnalyticsIcon from '@mui/icons-material/Analytics';
-import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
-import BusinessIcon from '@mui/icons-material/Business';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 
 import { logout } from '../../store/slices/authSlice';
 import GradientButton from '../modern/GradientButton';
@@ -54,7 +51,7 @@ function HideOnScroll({ children, window }) {
   );
 }
 
-const Header = () => {
+const Header = ({ colorMode, mode }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
@@ -65,23 +62,14 @@ const Header = () => {
   const [anchorElUser, setAnchorElUser] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   
-  // Calculate unread message count with safer handling of null/undefined values
   const unreadCount = Array.isArray(chats) 
     ? chats.reduce((acc, chat) => acc + (chat?.unreadCount || 0), 0)
     : 0;
 
-  const handleOpenUserMenu = (event) => {
-    setAnchorElUser(event.currentTarget);
-  };
+  const handleOpenUserMenu = (event) => setAnchorElUser(event.currentTarget);
+  const handleCloseUserMenu = () => setAnchorElUser(null);
+  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
-  const handleCloseUserMenu = () => {
-    setAnchorElUser(null);
-  };
-
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
-  
   const handleLogout = () => {
     dispatch(logout());
     navigate('/');
@@ -97,21 +85,13 @@ const Header = () => {
     { title: 'Create Listing', path: '/create-listing', icon: AddCircleOutlineIcon },
     { title: 'Messages', path: '/messages', icon: MessageIcon, badge: unreadCount },
   ];
-
-  const businessPages = [
-    { title: 'Analytics', path: '/analytics', icon: AnalyticsIcon },
-    { title: 'Wallet', path: '/wallet', icon: AccountBalanceWalletIcon },
-    { title: 'Company', path: '/company', icon: BusinessIcon },
-  ];
   
   const settings = [
     { title: 'Profile', action: () => navigate('/profile'), icon: PersonOutlineIcon },
     { title: 'Logout', action: handleLogout, icon: LogoutIcon },
   ];
 
-  const isActiveLink = (path) => {
-    return location.pathname === path;
-  };
+  const isActiveLink = (path) => location.pathname === path;
 
   const NavButton = ({ page, mobile = false }) => (
     <Button
@@ -148,17 +128,13 @@ const Header = () => {
         '&:hover': !mobile ? {
           background: alpha(theme.palette.common.white, 0.1),
           transform: 'translateY(-1px)',
-          '&::before': {
-            width: '80%',
-          },
+          '&::before': { width: '80%' },
         } : {
           background: alpha(theme.palette.common.white, 0.1),
         },
         ...(isActiveLink(page.path) && !mobile && {
           background: alpha(theme.palette.common.white, 0.1),
-          '&::before': {
-            width: '80%',
-          },
+          '&::before': { width: '80%' },
         }),
       }}
     >
@@ -189,11 +165,7 @@ const Header = () => {
         <Typography variant="h6" sx={{ fontWeight: 700 }}>
           SecondMarket
         </Typography>
-        <IconButton 
-          color="inherit" 
-          onClick={handleDrawerToggle}
-          sx={{ color: 'white' }}
-        >
+        <IconButton color="inherit" onClick={handleDrawerToggle} sx={{ color: 'white' }}>
           <CloseIcon />
         </IconButton>
       </Box>
@@ -209,16 +181,6 @@ const Header = () => {
           <>
             <Divider sx={{ my: 2, bgcolor: alpha(theme.palette.common.white, 0.1) }} />
             {privatePages.map((page) => (
-              <ListItem key={page.title} disablePadding sx={{ mb: 1 }}>
-                <NavButton page={page} mobile />
-              </ListItem>
-            ))}
-            
-            <Divider sx={{ my: 2, bgcolor: alpha(theme.palette.common.white, 0.1) }} />
-            <Typography variant="caption" sx={{ px: 3, py: 1, color: alpha(theme.palette.common.white, 0.7) }}>
-              Business Tools
-            </Typography>
-            {businessPages.map((page) => (
               <ListItem key={page.title} disablePadding sx={{ mb: 1 }}>
                 <NavButton page={page} mobile />
               </ListItem>
@@ -257,11 +219,7 @@ const Header = () => {
                 component={RouterLink}
                 to="/register"
                 onClick={handleDrawerToggle}
-                sx={{
-                  width: '100%',
-                  py: 1.5,
-                  fontWeight: 600,
-                }}
+                sx={{ width: '100%', py: 1.5, fontWeight: 600 }}
               >
                 Get Started
               </GradientButton>
@@ -295,9 +253,7 @@ const Header = () => {
                 alignItems: 'center',
                 textDecoration: 'none',
                 transition: 'transform 0.2s ease',
-                '&:hover': {
-                  transform: 'scale(1.05)',
-                },
+                '&:hover': { transform: 'scale(1.05)' },
               }}
             >
               <Typography
@@ -324,9 +280,7 @@ const Header = () => {
                 color="inherit"
                 sx={{
                   color: 'white',
-                  '&:hover': {
-                    background: alpha(theme.palette.common.white, 0.1),
-                  },
+                  '&:hover': { background: alpha(theme.palette.common.white, 0.1) },
                 }}
               >
                 <MenuIcon />
@@ -366,16 +320,28 @@ const Header = () => {
               {isAuthenticated && privatePages.map((page) => (
                 <NavButton key={page.title} page={page} />
               ))}
-              {isAuthenticated && businessPages.map((page) => (
-                <NavButton key={page.title} page={page} />
-              ))}
             </Box>
+
+            {/* 🌙 Dark Mode Toggle */}
+            <IconButton
+              sx={{
+                ml: 1,
+                color: 'white',
+                transition: 'transform 0.2s ease',
+                '&:hover': {
+                  transform: 'rotate(15deg) scale(1.1)',
+                  background: alpha(theme.palette.common.white, 0.1),
+                },
+              }}
+              onClick={colorMode.toggleColorMode}
+            >
+              {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+            </IconButton>
 
             {/* User menu */}
             <Box sx={{ flexGrow: 0, display: 'flex', alignItems: 'center' }}>
               {isAuthenticated ? (
                 <>
-                  {/* Notifications - desktop only */}
                   <IconButton
                     size="large"
                     color="inherit"
@@ -396,7 +362,6 @@ const Header = () => {
                     </Badge>
                   </IconButton>
                   
-                  {/* User profile */}
                   <Tooltip title="Open profile menu">
                     <IconButton 
                       onClick={handleOpenUserMenu} 
@@ -412,7 +377,7 @@ const Header = () => {
                     >
                       <Avatar 
                         alt={user?.name || 'User'} 
-                        src={user?.avatar || ''}
+                        src={user?.avatar || ''} 
                         sx={{ 
                           bgcolor: theme.palette.secondary.main,
                           width: 40,
@@ -521,16 +486,10 @@ const Header = () => {
         variant="temporary"
         open={mobileOpen}
         onClose={handleDrawerToggle}
-        ModalProps={{
-          keepMounted: true, // Better open performance on mobile.
-        }}
+        ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: 'block', md: 'none' },
-          '& .MuiDrawer-paper': { 
-            boxSizing: 'border-box', 
-            width: 280,
-            border: 'none',
-          },
+          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280, border: 'none' },
         }}
       >
         {drawer}

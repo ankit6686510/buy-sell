@@ -19,24 +19,26 @@ import {
   FormControl,
   RadioGroup,
   FormControlLabel,
+  useTheme, // <-- Added for theme access
+  alpha,    // <-- Added for color manipulation
 } from '@mui/material';
 import {
   Visibility,
   TrendingUp,
-  Star,
   FlashOn,
   EmojiEvents,
   Check,
   Close,
 } from '@mui/icons-material';
 
-// Promotion packages configuration
+// --- Promotion packages configuration (Using theme-ready colors) ---
+// Note: We keep gradient/color hexes here but use alpha/theme for shadows/borders.
 export const PROMOTION_PACKAGES = {
   spotlight: {
     id: 'spotlight',
     name: 'Spotlight',
     icon: Visibility,
-    color: '#f59e0b',
+    color: '#f59e0b', // Yellow/Warning
     gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
     tagline: 'Get 3x more views',
     description: 'Your ad appears in the spotlight section for maximum visibility',
@@ -57,7 +59,7 @@ export const PROMOTION_PACKAGES = {
     id: 'top_ads',
     name: 'Top Ads',
     icon: TrendingUp,
-    color: '#3b82f6',
+    color: '#3b82f6', // Blue/Info
     gradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
     tagline: 'Always appear first',
     description: 'Your ad stays at the top of search results',
@@ -78,7 +80,7 @@ export const PROMOTION_PACKAGES = {
     id: 'urgent',
     name: 'Urgent',
     icon: FlashOn,
-    color: '#ef4444',
+    color: '#ef4444', // Red/Error
     gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
     tagline: 'Sell faster',
     description: 'Mark your ad as urgent for quick sales',
@@ -99,7 +101,7 @@ export const PROMOTION_PACKAGES = {
     id: 'featured_plus',
     name: 'Featured Plus',
     icon: EmojiEvents,
-    color: '#8b5cf6',
+    color: '#8b5cf6', // Purple/Secondary
     gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
     tagline: 'Premium everything',
     description: 'Complete premium package with all benefits',
@@ -119,24 +121,33 @@ export const PROMOTION_PACKAGES = {
   },
 };
 
-// Individual package card component
+// --- Individual package card component ---
 const PromotionPackageCard = ({ package: pkg, selectedDuration, onSelect, onPromote }) => {
+  const theme = useTheme();
   const IconComponent = pkg.icon;
   const popularDuration = Object.entries(pkg.pricing).find(([_, data]) => data.popular)?.[0] || '7_days';
   
+  // Determine if the current card is selected
+  const isSelected = selectedDuration === pkg.id;
+
   return (
     <Card
+      elevation={isSelected ? 6 : 2} // Increased elevation when selected
       sx={{
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        border: selectedDuration ? '2px solid' : '1px solid',
-        borderColor: selectedDuration ? pkg.color : 'rgba(0,0,0,0.12)',
         borderRadius: '16px',
-        transition: 'all 0.3s ease',
+        // Theme-aware border for selection state
+        border: isSelected ? `3px solid ${pkg.color}` : `1px solid ${theme.palette.divider}`,
+        backgroundColor: theme.palette.background.paper, // Ensure it respects dark mode paper color
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: `0 8px 25px ${pkg.color}40`,
+          transform: 'translateY(-6px)', // Deeper lift on hover
+          // Theme-aware, color-tinted shadow on hover
+          boxShadow: isSelected 
+            ? theme.shadows[10] 
+            : `0 12px 30px ${alpha(pkg.color, theme.palette.mode === 'dark' ? 0.3 : 0.5)}`,
         },
       }}
     >
@@ -145,23 +156,24 @@ const PromotionPackageCard = ({ package: pkg, selectedDuration, onSelect, onProm
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
           <Box
             sx={{
-              width: 48,
-              height: 48,
-              borderRadius: '12px',
+              width: 52, // Slightly larger icon container
+              height: 52,
+              borderRadius: '16px',
               background: pkg.gradient,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               mr: 2,
+              boxShadow: theme.shadows[3],
             }}
           >
-            <IconComponent sx={{ fontSize: 24, color: 'white' }} />
+            <IconComponent sx={{ fontSize: 28, color: 'white' }} />
           </Box>
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: pkg.color }}>
               {pkg.name}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
               {pkg.tagline}
             </Typography>
           </Box>
@@ -177,11 +189,12 @@ const PromotionPackageCard = ({ package: pkg, selectedDuration, onSelect, onProm
           {pkg.features.map((feature, index) => (
             <ListItem key={index} sx={{ px: 0 }}>
               <ListItemIcon sx={{ minWidth: 32 }}>
-                <Check sx={{ fontSize: 16, color: pkg.color }} />
+                {/* Use the primary color for the checkmark */}
+                <Check sx={{ fontSize: 18, color: pkg.color }} /> 
               </ListItemIcon>
               <ListItemText 
                 primary={feature}
-                primaryTypographyProps={{ variant: 'body2' }}
+                primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
               />
             </ListItem>
           ))}
@@ -189,11 +202,12 @@ const PromotionPackageCard = ({ package: pkg, selectedDuration, onSelect, onProm
 
         {/* Pricing */}
         <Box sx={{ mb: 3 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
             Choose duration:
           </Typography>
-          <FormControl component="fieldset">
+          <FormControl component="fieldset" fullWidth>
             <RadioGroup
+              // Use the package ID as the RadioGroup value to manage selection state
               value={selectedDuration || popularDuration}
               onChange={(e) => onSelect(pkg.id, e.target.value)}
             >
@@ -201,21 +215,33 @@ const PromotionPackageCard = ({ package: pkg, selectedDuration, onSelect, onProm
                 <FormControlLabel
                   key={duration}
                   value={duration}
-                  control={<Radio size="small" sx={{ color: pkg.color }} />}
+                  control={
+                    // Theme-aware radio button color
+                    <Radio 
+                      size="small" 
+                      sx={{ 
+                        color: pkg.color,
+                        '&.Mui-checked': { color: pkg.color },
+                      }} 
+                    />
+                  }
                   label={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="body2">
-                        {data.duration} days - ₹{data.price}
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {data.duration} days - <strong style={{ color: pkg.color }}>₹{data.price}</strong>
                       </Typography>
                       {data.popular && (
                         <Chip 
-                          label="Popular" 
+                          label="POPULAR" 
                           size="small"
                           sx={{
-                            height: 18,
-                            fontSize: '0.65rem',
+                            height: 20,
+                            fontSize: '0.6rem',
+                            fontWeight: 700,
                             background: pkg.gradient,
                             color: 'white',
+                            // Add a subtle shadow to the popular chip
+                            boxShadow: `0 1px 4px ${alpha(pkg.color, 0.5)}`,
                           }}
                         />
                       )}
@@ -238,21 +264,26 @@ const PromotionPackageCard = ({ package: pkg, selectedDuration, onSelect, onProm
             background: pkg.gradient,
             borderRadius: '12px',
             py: 1.5,
-            fontWeight: 600,
+            fontWeight: 700,
+            color: 'white',
+            boxShadow: `0 4px 15px ${alpha(pkg.color, 0.6)}`,
+            transition: 'all 0.3s ease',
             '&:hover': {
-              background: pkg.gradient,
-              opacity: 0.9,
+              background: pkg.gradient, // Keep gradient on hover
+              opacity: 0.95,
+              transform: 'translateY(-2px)',
+              boxShadow: `0 6px 20px ${alpha(pkg.color, 0.8)}`,
             },
           }}
         >
-          Promote Now
+          Activate {pkg.name}
         </Button>
       </Box>
     </Card>
   );
 };
 
-// Main promotion packages component
+// --- Main promotion packages component ---
 const PromotionPackages = ({ 
   listingId, 
   isOpen, 
@@ -261,10 +292,11 @@ const PromotionPackages = ({
   currentPromotion = null 
 }) => {
   const [selectedPackages, setSelectedPackages] = useState({});
+  const theme = useTheme();
 
   const handlePackageSelect = (packageId, duration) => {
     setSelectedPackages(prev => ({
-      ...prev,
+      // Only one package can be selected at a time, so overwrite all previous
       [packageId]: duration
     }));
   };
@@ -292,41 +324,55 @@ const PromotionPackages = ({
         sx: {
           borderRadius: '24px',
           maxHeight: '90vh',
+          // Subtle backdrop blur for premium feel
+          backdropFilter: 'blur(8px)',
+          background: alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.95 : 0.98),
+          border: `1px solid ${theme.palette.divider}`,
+          boxShadow: theme.shadows[15],
         }
       }}
     >
-      <DialogTitle sx={{ pb: 1 }}>
+      <DialogTitle sx={{ pb: 1, borderBottom: `1px solid ${theme.palette.divider}` }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box>
-            <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
-              Promote Your Listing
+            <Typography variant="h5" sx={{ fontWeight: 800, mb: 0.5 }}>
+              Level Up Your Listing ✨
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Boost your listing's visibility and get more buyers
+            <Typography variant="body1" color="text.secondary">
+              Select the perfect boost to maximize your sales potential.
             </Typography>
           </Box>
-          <Button onClick={onClose} sx={{ minWidth: 'auto', p: 1 }}>
+          <Button onClick={onClose} sx={{ minWidth: 'auto', p: 1, color: 'text.secondary' }}>
             <Close />
           </Button>
         </Box>
       </DialogTitle>
 
-      <DialogContent>
+      <DialogContent sx={{ py: 3, '&::-webkit-scrollbar': { display: 'none' } }}>
+        {/* Current Promotion Alert (Enhanced) */}
         {currentPromotion && currentPromotion.type !== 'none' && (
-          <Box sx={{ mb: 3, p: 2, backgroundColor: 'success.light', borderRadius: '12px' }}>
-            <Typography variant="body2" color="success.dark">
-              Your listing is currently promoted with {PROMOTION_PACKAGES[currentPromotion.type]?.name} 
-              until {new Date(currentPromotion.endDate).toLocaleDateString()}
+          <Box 
+            sx={{ 
+              mb: 3, 
+              p: 2, 
+              backgroundColor: alpha(theme.palette.success.main, theme.palette.mode === 'dark' ? 0.1 : 0.2), 
+              borderRadius: '12px',
+              borderLeft: `5px solid ${theme.palette.success.main}`,
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.success.dark }}>
+              ✅ Your listing is **currently promoted** with **{PROMOTION_PACKAGES[currentPromotion.type]?.name}** until **{new Date(currentPromotion.endDate).toLocaleDateString()}**.
             </Typography>
           </Box>
         )}
 
-        <Grid container spacing={3}>
+        <Grid container spacing={4}>
           {Object.values(PROMOTION_PACKAGES).map((pkg) => (
             <Grid item xs={12} md={6} key={pkg.id}>
               <PromotionPackageCard
                 package={pkg}
-                selectedDuration={selectedPackages[pkg.id]}
+                // Pass the duration value, not just the boolean
+                selectedDuration={selectedPackages[pkg.id]} 
                 onSelect={handlePackageSelect}
                 onPromote={handlePromoteClick}
               />
@@ -334,10 +380,20 @@ const PromotionPackages = ({
           ))}
         </Grid>
 
-        <Box sx={{ mt: 3, p: 2, backgroundColor: 'info.light', borderRadius: '12px' }}>
-          <Typography variant="body2" color="info.dark">
-            💡 <strong>Pro Tip:</strong> Promoted listings get 3-10x more views and sell 2x faster than regular listings.
-            Choose longer durations for better value!
+        {/* Pro Tip (Enhanced) */}
+        <Box sx={{ 
+          mt: 4, 
+          p: 2.5, 
+          backgroundColor: alpha(theme.palette.info.main, theme.palette.mode === 'dark' ? 0.08 : 0.15), 
+          borderRadius: '12px', 
+          border: `1px dashed ${alpha(theme.palette.info.main, 0.5)}` 
+        }}>
+          <Typography variant="body2" sx={{ color: theme.palette.info.main, fontWeight: 700 }}>
+            🚀 Pro Tip:
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Promoted listings get **3-10x more views** and **sell 2x faster** than regular listings. 
+            The longer duration packages offer the best value!
           </Typography>
         </Box>
       </DialogContent>
