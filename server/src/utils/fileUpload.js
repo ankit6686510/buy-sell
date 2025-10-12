@@ -44,6 +44,24 @@ const upload = multer({
   }
 });
 
+// Function to upload buffer to Cloudinary
+export const uploadToCloudinary = async (buffer, options = {}) => {
+  return new Promise((resolve, reject) => {
+    const b64 = Buffer.from(buffer).toString('base64');
+    const dataURI = `data:image/jpeg;base64,${b64}`;
+    
+    const uploadOptions = {
+      folder: 'SecondMarket',
+      ...options
+    };
+    
+    cloudinary.uploader.upload(dataURI, uploadOptions, (error, result) => {
+      if (error) return reject(error);
+      resolve(result);
+    });
+  });
+};
+
 // Function to delete file from Cloudinary
 export const deleteFile = async (publicId) => {
   try {

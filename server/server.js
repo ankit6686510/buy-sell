@@ -28,6 +28,9 @@ import Chat from './src/models/Chat.js';
 // Import socket.io initialization
 import { initializeSocket } from './socket.js';
 
+// Import services
+import emailService from './src/services/emailService.js';
+
 // Import routes
 import userRoutes from './src/routes/userRoutes.js';
 import productListingRoutes from './src/routes/productListingRoutes.js';
@@ -35,6 +38,7 @@ import messageRoutes from './src/routes/messageRoutes.js';
 import ratingRoutes from './src/routes/ratingRoutes.js';
 import analyticsRoutes from './src/routes/analyticsRoutes.js';
 import onboardingRoutes from './src/routes/onboardingRoutes.js';
+import companyRoutes from './src/routes/companyRoutes.js';
 
 // Initialize Express app
 const app = express();
@@ -247,12 +251,28 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     
     await user.save({ validateBeforeSave: false });
     
-    // Here you would typically send an email with the reset link
-    // For now, we'll just return success
-    res.status(200).json({ 
-      message: 'Password reset token generated successfully',
-      token: resetToken // In production, this should be sent via email only
-    });
+    // Create reset URL
+    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+    
+    // Send password reset email
+    try {
+      await emailService.sendPasswordResetEmail(user, resetUrl, resetToken);
+      
+      res.status(200).json({ 
+        message: 'Password reset email sent successfully'
+      });
+    } catch (emailError) {
+      logger.error('Email sending error:', emailError);
+      
+      // Reset the token if email fails
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+      
+      res.status(500).json({ 
+        message: 'Email could not be sent. Please try again later.' 
+      });
+    }
   } catch (error) {
     logger.error('Forgot password error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -303,6 +323,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/onboarding', onboardingRoutes);
+app.use('/api/companies', companyRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

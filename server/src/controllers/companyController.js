@@ -8,13 +8,20 @@ export const createCompanyProfile = async (req, res) => {
   try {
     const userId = req.user.id;
     
-    // Check if user account type is business
+    // Get user and automatically upgrade to business if needed
     const user = await User.findById(userId);
-    if (user.accountType !== 'business') {
-      return res.status(400).json({
+    if (!user) {
+      return res.status(404).json({
         success: false,
-        message: 'Only business accounts can create company profiles'
+        message: 'User not found'
       });
+    }
+
+    // Auto-upgrade individual users to business when creating company profile
+    if (user.accountType === 'individual') {
+      user.accountType = 'business';
+      user.subscriptionTier = 'basic'; // Start with basic business tier
+      await user.save();
     }
     
     // Check if company profile already exists
@@ -102,9 +109,7 @@ export const createCompanyProfile = async (req, res) => {
     });
     
     const populatedCompany = await Company.findById(company._id)
-      .populate('user', 'name email phoneNumber')
-      .populate('productCount')
-      .populate('catalogCount');
+      .populate('user', 'name email phoneNumber');
     
     res.status(201).json({
       success: true,
@@ -129,9 +134,7 @@ export const getCompanyProfile = async (req, res) => {
     const viewerUserId = req.user?.id;
     
     const company = await Company.findById(id)
-      .populate('user', 'name email phoneNumber rating totalRatings badges trustScore')
-      .populate('productCount')
-      .populate('catalogCount');
+      .populate('user', 'name email phoneNumber rating totalRatings badges trustScore');
     
     if (!company) {
       return res.status(404).json({
@@ -220,9 +223,7 @@ export const updateCompanyProfile = async (req, res) => {
     });
     
     const updatedCompany = await Company.findById(company._id)
-      .populate('user', 'name email phoneNumber')
-      .populate('productCount')
-      .populate('catalogCount');
+      .populate('user', 'name email phoneNumber');
     
     res.json({
       success: true,
@@ -390,9 +391,7 @@ export const getMyCompanyProfile = async (req, res) => {
     const userId = req.user.id;
     
     const company = await Company.findOne({ user: userId })
-      .populate('user', 'name email phoneNumber')
-      .populate('productCount')
-      .populate('catalogCount');
+      .populate('user', 'name email phoneNumber');
     
     if (!company) {
       return res.status(404).json({

@@ -15,7 +15,7 @@ class EmailService {
   createTransporter() {
     if (process.env.SENDGRID_API_KEY) {
       // SendGrid configuration (Free 100 emails/day)
-      return nodemailer.createTransporter({
+      return nodemailer.createTransport({
         service: 'SendGrid',
         auth: {
           user: 'apikey',
@@ -24,7 +24,7 @@ class EmailService {
       });
     } else if (process.env.MAILGUN_API_KEY) {
       // Mailgun configuration (Free 5000 emails/month)
-      return nodemailer.createTransporter({
+      return nodemailer.createTransport({
         service: 'mailgun',
         auth: {
           user: process.env.MAILGUN_USERNAME,
@@ -33,7 +33,7 @@ class EmailService {
       });
     } else {
       // Gmail configuration (fallback)
-      return nodemailer.createTransporter({
+      return nodemailer.createTransport({
         service: 'Gmail',
         auth: {
           user: process.env.SMTP_USER,
@@ -51,6 +51,10 @@ class EmailService {
       welcome: {
         subject: 'Welcome to SecondMarket! 🎉',
         html: this.getWelcomeTemplate()
+      },
+      password_reset: {
+        subject: 'Reset your SecondMarket password 🔐',
+        html: this.getPasswordResetTemplate()
       },
       listing_approved: {
         subject: 'Your listing is now live! 🚀',
@@ -275,6 +279,45 @@ class EmailService {
       return true;
     } catch (error) {
       console.error('Subscription upsell email error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send password reset email
+   */
+  async sendPasswordResetEmail(user, resetUrl, resetToken) {
+    try {
+      const emailData = {
+        to: user.email,
+        ...this.templates.password_reset,
+        html: this.templates.password_reset.html
+          .replace(/{{userName}}/g, user.name)
+          .replace(/{{resetUrl}}/g, resetUrl)
+          .replace(/{{resetToken}}/g, resetToken)
+          .replace(/{{userEmail}}/g, user.email)
+      };
+
+      await this.sendEmail(emailData);
+      
+      // Track email sent for analytics
+      try {
+        await analyticsService.trackEvent({
+          userId: user._id,
+          event: 'email_sent',
+          properties: {
+            type: 'password_reset',
+            email: user.email
+          }
+        });
+      } catch (analyticsError) {
+        console.error('Analytics tracking error:', analyticsError);
+        // Don't fail email sending due to analytics error
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Password reset email error:', error);
       return false;
     }
   }
@@ -825,6 +868,77 @@ class EmailService {
                 
                 <p>We can't wait to see you back!<br>
                 The SecondMarket Team</p>
+            </div>
+        </div>
+    </body>
+    </html>`;
+  }
+
+  getPasswordResetTemplate() {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Reset Your Password</title>
+        <style>
+            body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .button { display: inline-block; background: #ef4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+            .security-box { background: #fef2f2; border: 1px solid #ef4444; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .token-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; font-family: monospace; font-size: 16px; text-align: center; margin: 15px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🔐 Reset Your Password</h1>
+                <p>Secure password reset for your SecondMarket account</p>
+            </div>
+            <div class="content">
+                <h2>Hi {{userName}}! 👋</h2>
+                <p>We received a request to reset your password for your SecondMarket account ({{userEmail}}).</p>
+                
+                <div class="security-box">
+                    <h3>🔒 Security Notice</h3>
+                    <p><strong>This link expires in 10 minutes</strong> for your security.</p>
+                    <p>If you didn't request this password reset, please ignore this email and your password will remain unchanged.</p>
+                </div>
+                
+                <h3>🚀 Reset Your Password:</h3>
+                <p>Click the button below to create a new password:</p>
+                
+                <div style="text-align: center;">
+                    <a href="{{resetUrl}}" class="button">Reset My Password</a>
+                </div>
+                
+                <h3>📱 Alternative Method:</h3>
+                <p>If the button doesn't work, copy and paste this link into your browser:</p>
+                <div class="token-box">{{resetUrl}}</div>
+                
+                <p><strong>⏰ Important:</strong> This link will expire in 10 minutes for security reasons. If it expires, you'll need to request a new password reset.</p>
+                
+                <h3>🛡️ Security Tips:</h3>
+                <ul>
+                    <li>Use a strong, unique password</li>
+                    <li>Include uppercase, lowercase, numbers, and symbols</li>
+                    <li>Don't share your password with anyone</li>
+                    <li>Consider using a password manager</li>
+                </ul>
+                
+                <p>If you're having trouble, reply to this email and we'll help you out! 💬</p>
+                
+                <p>Stay secure!<br>
+                The SecondMarket Team</p>
+            </div>
+            <div class="footer">
+                <p>SecondMarket - India's Smart Marketplace Platform</p>
+                <p>If you didn't request this reset, please contact us immediately at security@budmatching.com</p>
+                <p>This email was sent to {{userEmail}}</p>
             </div>
         </div>
     </body>

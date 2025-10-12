@@ -1,6 +1,8 @@
 import User from '../models/User.js';
+import Company from '../models/Company.js';
 import { generateTokens, verifyRefreshToken } from '../middleware/auth.js';
 import { validationResult } from 'express-validator';
+import { getUserFeatures, getLeadCreditLimit, getUpgradeOptions, SUBSCRIPTION_PRICING } from '../utils/featureAccess.js';
 
 export const register = async (req, res) => {
   try {
@@ -577,5 +579,124 @@ export const logout = async (req, res) => {
     res.json({ message: 'Logout successful' });
   } catch (error) {
     res.status(500).json({ message: 'Error logging out', error: error.message });
+  }
+};
+
+// Get user features and subscription information
+export const getUserSubscriptionInfo = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if user has a company profile
+    const company = await Company.findOne({ user: user._id });
+
+    // Get available features
+    const features = getUserFeatures(user, company);
+    const leadCreditLimit = getLeadCreditLimit(user);
+    const upgradeOptions = getUpgradeOptions(user);
+
+    // Get current subscription pricing
+    const currentPricing = SUBSCRIPTION_PRICING[user.accountType]?.[user.subscriptionTier] || null;
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        accountType: user.accountType,
+        subscriptionTier: user.subscriptionTier,
+        subscriptionExpiry: user.subscriptionExpiry
+      },
+      company: company ? {
+        id: company._id,
+        companyName: company.companyName,
+        leadCredits: company.leadCredits || 0,
+        verificationStatus: company.verificationStatus
+      } : null,
+      features,
+      limits: {
+        leadCredits: leadCreditLimit
+      },
+      subscription: {
+        current: {
+          tier: user.subscriptionTier,
+          accountType: user.accountType,
+          pricing: currentPricing
+        },
+        upgradeOptions
+      }
+    });
+  } catch (error) {
+    console.error('Get user features error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error fetching user features', 
+      error: error.message 
+    });
+  }
+};
+
+// Upgrade user subscription
+export const upgradeSubscription = async (req, res) => {
+  try {
+    const { targetTier } = req.body;
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+
+    // Validate upgrade path
+    const upgradeOptions = getUpgradeOptions(user);
+    const validUpgrade = upgradeOptions.find(option => option.tier === targetTier);
+    
+    if (!validUpgrade) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid upgrade tier',
+        availableUpgrades: upgradeOptions
+      });
+    }
+
+    // Update user subscription
+    user.subscriptionTier = targetTier;
+    
+    // Set subscription expiry (monthly billing)
+    const now = new Date();
+    user.subscriptionExpiry = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+    
+    await user.save();
+
+    // Get updated features
+    const company = await Company.findOne({ user: user._id });
+    const features = getUserFeatures(user, company);
+    const leadCreditLimit = getLeadCreditLimit(user);
+
+    res.json({
+      success: true,
+      message: `Successfully upgraded to ${validUpgrade.name} tier`,
+      user: {
+        id: user._id,
+        accountType: user.accountType,
+        subscriptionTier: user.subscriptionTier,
+        subscriptionExpiry: user.subscriptionExpiry
+      },
+      features,
+      limits: {
+        leadCredits: leadCreditLimit
+      }
+    });
+  } catch (error) {
+    console.error('Upgrade subscription error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error upgrading subscription', 
+      error: error.message 
+    });
   }
 };

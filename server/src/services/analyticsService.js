@@ -1,4 +1,4 @@
-import Analytics from '../models/Analytics.js';
+import { UserActivity, PageView, Conversion, ABTest, Performance, ErrorLog } from '../models/Analytics.js';
 import Transaction from '../models/Transaction.js';
 import User from '../models/User.js';
 import ProductListing from '../models/ProductListing.js';
@@ -22,16 +22,17 @@ class AnalyticsService {
         page
       } = eventData;
 
-      const analytics = new Analytics({
-        userId,
+      const analytics = new UserActivity({
+        user: userId,
         sessionId,
-        event,
-        properties,
-        userAgent,
-        ipAddress,
-        referrer,
-        page,
-        timestamp: new Date()
+        action: event,
+        metadata: {
+          ...properties,
+          userAgent,
+          ipAddress,
+          referrer,
+          pageUrl: page
+        }
       });
 
       await analytics.save();

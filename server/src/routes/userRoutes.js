@@ -17,7 +17,9 @@ import {
   unblockUser,
   getBlockedUsers,
   getTrustInfo,
-  updateLastActive
+  updateLastActive,
+  getUserSubscriptionInfo,
+  upgradeSubscription
 } from '../controllers/userController.js';
 import { auth } from '../middleware/auth.js';
 import { userValidationRules } from '../utils/validators.js';
@@ -55,5 +57,9 @@ router.get('/blocked', auth, getBlockedUsers);
 
 // Activity tracking
 router.post('/activity', auth, updateLastActive);
+
+// Subscription and features
+router.get('/subscription', auth, getUserSubscriptionInfo);
+router.post('/upgrade', auth, upgradeSubscription);
 
 export default router;

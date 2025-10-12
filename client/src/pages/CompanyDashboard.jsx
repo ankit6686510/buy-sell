@@ -158,21 +158,27 @@ const CompanyDashboard = () => {
 
   const loadCompanyData = async () => {
     try {
-      const response = await api.get('/api/companies/my-profile');
+      const response = await api.get('/api/companies/me/profile');
       setCompanyData(response.data.company);
       if (response.data.company) {
         setProfileForm(response.data.company);
       }
     } catch (err) {
-      setError('Failed to load company data');
-      console.error('Company data error:', err);
+      // If company profile doesn't exist, that's expected for new users
+      if (err.message === 'Company profile not found') {
+        setCompanyData(null);
+        setError(null);
+      } else {
+        setError('Failed to load company data');
+        console.error('Company data error:', err);
+      }
     }
   };
 
   const loadAnalytics = async () => {
     try {
-      const response = await api.get('/api/companies/analytics');
-      setAnalytics(response.data);
+      const response = await api.get('/api/companies/me/analytics');
+      setAnalytics(response.data.analytics);
     } catch (err) {
       console.error('Analytics error:', err);
     } finally {
@@ -180,9 +186,48 @@ const CompanyDashboard = () => {
     }
   };
 
+  const handleCreateProfile = async () => {
+    try {
+      // Map form data to Company model structure
+      const companyPayload = {
+        companyName: profileForm.companyName,
+        description: profileForm.description,
+        businessType: profileForm.industry || 'manufacturer', // Use industry as businessType
+        categories: [profileForm.industry || 'Other'], // Add categories array
+        yearEstablished: parseInt(profileForm.yearEstablished) || undefined,
+        employeeCount: profileForm.numberOfEmployees,
+        annualTurnover: profileForm.annualTurnover,
+        businessAddress: {
+          address: profileForm.address || 'Not provided',
+          city: profileForm.city || 'Not provided',
+          state: profileForm.state || 'Not provided',
+          pincode: profileForm.pincode || '000000',
+          country: 'India'
+        },
+        contactInfo: {
+          phone: profileForm.phone || user?.phoneNumber || 'Not provided',
+          email: profileForm.email || user?.email,
+          website: profileForm.website || ''
+        },
+        gstNumber: profileForm.gstNumber || undefined
+      };
+
+      const response = await api.post('/api/companies', companyPayload);
+      
+      if (response.data.success) {
+        setCompanyData(response.data.company);
+        setEditProfileDialog(false);
+        showSnackbar('Company profile created successfully!', 'success');
+      }
+    } catch (err) {
+      showSnackbar('Failed to create profile', 'error');
+      console.error('Create profile error:', err);
+    }
+  };
+
   const handleUpdateProfile = async () => {
     try {
-      const response = await api.put('/api/companies/profile', profileForm);
+      const response = await api.put('/api/companies/me/profile', profileForm);
       
       if (response.data.success) {
         setCompanyData(response.data.company);
@@ -314,7 +359,63 @@ const CompanyDashboard = () => {
     return { status: 'pending', label: 'Pending', color: 'warning' };
   };
 
+  const NoCompanyProfile = () => (
+    <Card sx={{ textAlign: 'center', py: 6 }}>
+      <CardContent>
+        <Business sx={{ fontSize: 80, color: 'primary.main', mb: 3 }} />
+        <Typography variant="h4" gutterBottom>
+          Welcome to Company Dashboard
+        </Typography>
+        <Typography variant="body1" color="textSecondary" sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
+          Create your company profile to start showcasing your business, connect with potential clients, 
+          and access powerful tools to grow your business on our platform.
+        </Typography>
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={<Business />}
+          onClick={() => setEditProfileDialog(true)}
+          sx={{ mb: 3 }}
+        >
+          Create Company Profile
+        </Button>
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Why create a company profile?
+          </Typography>
+          <Grid container spacing={3} sx={{ mt: 2 }}>
+            <Grid item xs={12} md={4}>
+              <Verified sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
+              <Typography variant="subtitle2">Build Trust</Typography>
+              <Typography variant="body2" color="textSecondary">
+                Verified company profiles build credibility with customers
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TrendingUp sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
+              <Typography variant="subtitle2">Increase Visibility</Typography>
+              <Typography variant="body2" color="textSecondary">
+                Get discovered by potential customers searching for your services
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Analytics sx={{ fontSize: 40, color: 'info.main', mb: 1 }} />
+              <Typography variant="subtitle2">Track Performance</Typography>
+              <Typography variant="body2" color="textSecondary">
+                Access detailed analytics and insights about your business
+              </Typography>
+            </Grid>
+          </Grid>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+
   const CompanyOverview = () => {
+    if (!companyData) {
+      return <NoCompanyProfile />;
+    }
+
     const verification = getVerificationStatus(companyData?.documents);
     
     return (
@@ -790,12 +891,53 @@ const CompanyDashboard = () => {
                 </Select>
               </FormControl>
             </Grid>
+            
+            {/* Business Address Section */}
+            <Grid item xs={12}>
+              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Business Address</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Address"
+                value={profileForm.address}
+                onChange={(e) => setProfileForm({...profileForm, address: e.target.value})}
+                placeholder="Enter your business address"
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="City"
+                value={profileForm.city}
+                onChange={(e) => setProfileForm({...profileForm, city: e.target.value})}
+                placeholder="Enter city"
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="State"
+                value={profileForm.state}
+                onChange={(e) => setProfileForm({...profileForm, state: e.target.value})}
+                placeholder="Enter state"
+              />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                label="Pincode"
+                value={profileForm.pincode}
+                onChange={(e) => setProfileForm({...profileForm, pincode: e.target.value})}
+                placeholder="Enter pincode"
+              />
+            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditProfileDialog(false)}>Cancel</Button>
-          <Button onClick={handleUpdateProfile} variant="contained">
-            Update Profile
+          <Button onClick={companyData ? handleUpdateProfile : handleCreateProfile} variant="contained">
+            {companyData ? 'Update Profile' : 'Create Profile'}
           </Button>
         </DialogActions>
       </Dialog>

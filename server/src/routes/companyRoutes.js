@@ -12,7 +12,7 @@ import {
   addLeadCredits,
   getCompanyAnalytics
 } from '../controllers/companyController.js';
-import { protect } from '../middleware/auth.js';
+import { auth } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -49,7 +49,7 @@ router.get('/category/:category', getCompaniesByCategory);
 router.get('/:id', getCompanyProfile);
 
 // Protected routes (require authentication)
-router.use(protect);
+router.use(auth);
 
 // Company profile management
 router.post('/', createCompanyProfile);
