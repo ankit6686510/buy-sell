@@ -391,16 +391,23 @@ const Register = () => {
                         autoComplete="email"
                         error={touched.email && Boolean(errors.email)}
                         helperText={
-                          touched.email && errors.email && (
+                          touched.email && errors.email ? (
                             <Box display="flex" alignItems="center" gap={0.5}>
                               <ErrorOutline color="error" fontSize="small" />
                               <Typography variant="caption" color="error" role="alert" aria-live="assertive">
                                 {errors.email}
                               </Typography>
                             </Box>
+                          ) : (
+                            values.email && (
+                              <Box display="flex" alignItems="center" gap={0.5}>
+                                <Typography variant="caption" color={/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(values.email) ? 'success.main' : 'warning.main'}>
+                                  {/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(values.email) ? 'Valid email address' : 'Enter a valid email address'}
+                                </Typography>
+                              </Box>
+                            )
                           )
                         }
-
                         InputProps={{
                           startAdornment: (
                             <Email sx={{ color: 'text.secondary', mr: 1, ml: 1 }} />
@@ -472,13 +479,21 @@ const Register = () => {
                         id="password"
                         autoComplete="new-password"
                         error={touched.password && Boolean(errors.password)}
-                        helperText={touched.password && errors.password && (
+                        helperText={touched.password && errors.password ? (
                           <Box display="flex" alignItems="center" gap={0.5}>
                             <ErrorOutline color="error" fontSize="small" />
                             <Typography variant="caption" color="error" role="alert" aria-live="assertive">
                               {errors.password}
                             </Typography>
                           </Box>
+                        ) : (
+                          values.password && (
+                            <Box display="flex" alignItems="center" gap={0.5}>
+                              <Typography variant="caption" color={values.password.length < 6 ? 'error.main' : /[A-Z]/.test(values.password) && /[a-z]/.test(values.password) && /[0-9]/.test(values.password) && /[^A-Za-z0-9]/.test(values.password) ? 'success.main' : 'warning.main'}>
+                                Password strength: {values.password.length < 6 ? 'Weak' : /[A-Z]/.test(values.password) && /[a-z]/.test(values.password) && /[0-9]/.test(values.password) && /[^A-Za-z0-9]/.test(values.password) ? 'Strong' : 'Medium'}
+                              </Typography>
+                            </Box>
+                          )
                         )}
                         InputProps={{
                           startAdornment: (
