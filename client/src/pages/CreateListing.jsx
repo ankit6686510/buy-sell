@@ -29,6 +29,10 @@ import { createListing } from '../services/listingService';
 import { uploadMultipleImages } from '../services/uploadService';
 import { gradients } from '../theme';
 
+// --- CONFIGURATION ---
+const MAX_IMAGES = 10;
+const MAX_FILE_SIZE_MB = 5; // 5MB per file
+
 // Product categories
 const categories = [
   { value: 'electronics', label: 'Electronics' },
@@ -43,15 +47,20 @@ const categories = [
 ];
 
 const validationSchema = Yup.object({
-  title: Yup.string().required('Product title is required'),
+  title: Yup.string()
+    .required('Product title is required')
+    .min(5, 'Title must be at least 5 characters'),
   category: Yup.string().required('Category is required'),
   brand: Yup.string(),
   condition: Yup.string().required('Condition is required'),
   price: Yup.number()
     .required('Price is required')
-    .positive('Price must be positive'),
+    .positive('Price must be positive')
+    .max(9999999, 'Price too high'),
   location: Yup.string().required('Location is required'),
-  description: Yup.string().required('Description is required'),
+  description: Yup.string()
+    .required('Description is required')
+    .min(20, 'Description must be at least 20 characters'),
 });
 
 const CreateListing = () => {
@@ -59,7 +68,7 @@ const CreateListing = () => {
   const dispatch = useDispatch();
   const { loading, error } = useSelector((state) => state.listings);
   const { user } = useSelector((state) => state.auth);
-  
+
   const [uploadedImages, setUploadedImages] = useState([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState(null);
@@ -68,81 +77,110 @@ const CreateListing = () => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
+    const currentTotal = uploadedImages.length;
+    const filesToUpload = Array.from(files).slice(0, MAX_IMAGES - currentTotal);
+    const totalNewImages = filesToUpload.length;
+
+    // --- Basic Client-Side Validation ---
+    if (currentTotal >= MAX_IMAGES) {
+      setUploadError(`You can only upload a maximum of ${MAX_IMAGES} images.`);
+      return;
+    }
+    const oversizedFiles = filesToUpload.filter(file => file.size > MAX_FILE_SIZE_MB * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      setUploadError(`One or more files exceed the ${MAX_FILE_SIZE_MB}MB size limit.`);
+      return;
+    }
+    // ------------------------------------
+
     setUploadingImage(true);
     setUploadError(null);
     try {
-      const result = await uploadMultipleImages(Array.from(files));
-      
+      const result = await uploadMultipleImages(filesToUpload);
+
       const newImages = result.images.map(image => ({
         url: image.url,
         publicId: image.publicId
       }));
-      
-      setUploadedImages([...uploadedImages, ...newImages]);
+
+      setUploadedImages(prevImages => [...prevImages, ...newImages]);
+      if (files.length > totalNewImages) {
+          setUploadError(`Only ${totalNewImages} of ${files.length} images were uploaded due to the ${MAX_IMAGES} limit.`);
+      }
     } catch (error) {
       console.error('Error uploading images:', error);
-      setUploadError(error.message || 'Failed to upload images');
+      setUploadError(error.message || 'Failed to upload images. Check file type and size.');
     } finally {
       setUploadingImage(false);
+      // Clear the file input value to allow the user to select the same file(s) again
+      event.target.value = null;
     }
   };
-  
+
   const removeImage = (indexToRemove) => {
     setUploadedImages(uploadedImages.filter((_, index) => index !== indexToRemove));
   };
-  
+
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
+    if (uploadedImages.length === 0) {
+      setUploadError('Please upload at least one image for your listing.');
+      setSubmitting(false);
+      return;
+    }
+
     try {
       // Include user's location from profile if not specified
       if (!values.location && user?.location) {
         values.location = user.location;
       }
-      
+
       // Add the uploaded images to the form values
       values.images = uploadedImages.map(img => img.url);
-      
+
       dispatch(createListingStart());
       const response = await createListing(values);
       dispatch(createListingSuccess(response.listing));
-      
+
       resetForm();
       setUploadedImages([]);
+      // Use the newly created listing ID for navigation
       navigate(`/listings/${response.listing._id}`);
     } catch (err) {
-      dispatch(createListingFailure(err.message || 'Failed to create listing'));
+      dispatch(createListingFailure(err.response?.data?.message || err.message || 'Failed to create listing'));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Container maxWidth="md">
-      <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
-        <Typography 
-          variant="h4" 
-          component="h1" 
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 }, mb: 4 }}>
+        <Typography
+          variant="h4"
+          component="h1"
           gutterBottom
-          sx={{ 
+          sx={{
             fontWeight: 800,
-            background: gradients.primary,
+            background: gradients.primary, // Assuming gradients is defined in your theme
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
             mb: 2
           }}
         >
-          Sell Your Product
+          Sell Your Product 🚀
         </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-          List your item for sale and connect with buyers in your area
+          List your item for sale and connect with buyers in your area.
         </Typography>
-        
+
+        {/* Global Listing Error */}
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
         )}
-        
+
         <Formik
           initialValues={{
             title: '',
@@ -157,9 +195,10 @@ const CreateListing = () => {
           validationSchema={validationSchema}
           onSubmit={handleSubmit}
         >
-          {({ errors, touched, isSubmitting, setFieldValue }) => (
+          {({ errors, touched, isSubmitting, values, setFieldValue }) => (
             <Form>
               <Grid container spacing={3}>
+                {/* Product Title */}
                 <Grid item xs={12}>
                   <Field
                     as={TextField}
@@ -167,20 +206,21 @@ const CreateListing = () => {
                     id="title"
                     name="title"
                     label="Product Title"
-                    placeholder="e.g., iPhone 14 Pro Max, Nike Air Jordan, Samsung TV..."
+                    placeholder="e.g., iPhone 14 Pro Max, Nike Air Jordan..."
                     variant="outlined"
                     error={touched.title && Boolean(errors.title)}
                     helperText={touched.title && errors.title}
-                    disabled={loading}
+                    disabled={loading || isSubmitting}
                   />
                 </Grid>
-                
+
+                {/* Category Select */}
                 <Grid item xs={12} sm={6}>
                   <FormControl
                     fullWidth
                     variant="outlined"
                     error={touched.category && Boolean(errors.category)}
-                    disabled={loading}
+                    disabled={loading || isSubmitting}
                   >
                     <InputLabel id="category-label">Category</InputLabel>
                     <Field
@@ -189,6 +229,9 @@ const CreateListing = () => {
                       id="category"
                       name="category"
                       label="Category"
+                      // CRITICAL FIX: Manually setting value/onChange for MUI Select in Formik
+                      value={values.category}
+                      onChange={(event) => setFieldValue('category', event.target.value)}
                     >
                       <MenuItem value="">Select a category</MenuItem>
                       {categories.map((category) => (
@@ -202,7 +245,8 @@ const CreateListing = () => {
                     )}
                   </FormControl>
                 </Grid>
-                
+
+                {/* Brand */}
                 <Grid item xs={12} sm={6}>
                   <Field
                     as={TextField}
@@ -214,16 +258,17 @@ const CreateListing = () => {
                     variant="outlined"
                     error={touched.brand && Boolean(errors.brand)}
                     helperText={touched.brand && errors.brand}
-                    disabled={loading}
+                    disabled={loading || isSubmitting}
                   />
                 </Grid>
-                
+
+                {/* Condition Select */}
                 <Grid item xs={12} sm={6}>
                   <FormControl
                     fullWidth
                     variant="outlined"
                     error={touched.condition && Boolean(errors.condition)}
-                    disabled={loading}
+                    disabled={loading || isSubmitting}
                   >
                     <InputLabel id="condition-label">Condition</InputLabel>
                     <Field
@@ -232,6 +277,9 @@ const CreateListing = () => {
                       id="condition"
                       name="condition"
                       label="Condition"
+                      // CRITICAL FIX: Manually setting value/onChange for MUI Select in Formik
+                      value={values.condition}
+                      onChange={(event) => setFieldValue('condition', event.target.value)}
                     >
                       <MenuItem value="">Select condition</MenuItem>
                       <MenuItem value="new">New</MenuItem>
@@ -245,7 +293,8 @@ const CreateListing = () => {
                     )}
                   </FormControl>
                 </Grid>
-                
+
+                {/* Price */}
                 <Grid item xs={12} sm={6}>
                   <Field
                     as={TextField}
@@ -255,7 +304,7 @@ const CreateListing = () => {
                     label="Price"
                     type="number"
                     variant="outlined"
-                    InputProps={{ 
+                    InputProps={{
                       inputProps: { min: 0 },
                       startAdornment: (
                         <InputAdornment position="start">
@@ -266,10 +315,11 @@ const CreateListing = () => {
                     placeholder="Enter price in rupees"
                     error={touched.price && Boolean(errors.price)}
                     helperText={touched.price && errors.price}
-                    disabled={loading}
+                    disabled={loading || isSubmitting}
                   />
                 </Grid>
-                
+
+                {/* Location */}
                 <Grid item xs={12}>
                   <Field
                     as={TextField}
@@ -281,10 +331,11 @@ const CreateListing = () => {
                     variant="outlined"
                     error={touched.location && Boolean(errors.location)}
                     helperText={touched.location && errors.location}
-                    disabled={loading}
+                    disabled={loading || isSubmitting}
                   />
                 </Grid>
-                
+
+                {/* Description */}
                 <Grid item xs={12}>
                   <Field
                     as={TextField}
@@ -298,17 +349,18 @@ const CreateListing = () => {
                     variant="outlined"
                     error={touched.description && Boolean(errors.description)}
                     helperText={touched.description && errors.description}
-                    disabled={loading}
+                    disabled={loading || isSubmitting}
                   />
                 </Grid>
-                
+
+                {/* Image Upload Section */}
                 <Grid item xs={12}>
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle1" gutterBottom>
-                      Upload Images (Up to 10 photos)
+                    <Typography variant="h6" gutterBottom>
+                      Product Photos ({uploadedImages.length}/{MAX_IMAGES})
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Add clear photos to help buyers see your product better
+                      Add clear photos to help buyers see your product better (Max {MAX_IMAGES} images, {MAX_FILE_SIZE_MB}MB each).
                     </Typography>
                     <input
                       accept="image/*"
@@ -317,30 +369,32 @@ const CreateListing = () => {
                       multiple
                       onChange={handleImageUpload}
                       style={{ display: 'none' }}
-                      disabled={loading || uploadingImage}
+                      disabled={loading || isSubmitting || uploadingImage || uploadedImages.length >= MAX_IMAGES}
                     />
                     <label htmlFor="upload-button">
                       <Button
                         variant="outlined"
                         component="span"
-                        disabled={loading || uploadingImage}
+                        disabled={loading || isSubmitting || uploadingImage || uploadedImages.length >= MAX_IMAGES}
                       >
                         {uploadingImage ? <CircularProgress size={24} /> : 'Upload Images'}
                       </Button>
                     </label>
                   </Box>
-                  
+
+                  {/* Image Previews */}
                   {uploadedImages.length > 0 && (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                       {uploadedImages.map((img, index) => (
                         <Box
                           key={index}
-                          sx={{ 
-                            position: 'relative', 
-                            height: 100, 
-                            width: 100, 
+                          sx={{
+                            position: 'relative',
+                            height: 100,
+                            width: 100,
                             borderRadius: 1,
-                            overflow: 'hidden'
+                            overflow: 'hidden',
+                            border: '1px solid #ccc',
                           }}
                         >
                           <Box
@@ -355,10 +409,10 @@ const CreateListing = () => {
                               position: 'absolute',
                               top: 0,
                               right: 0,
-                              bgcolor: 'rgba(0,0,0,0.3)',
+                              bgcolor: 'rgba(0,0,0,0.5)',
                               color: 'white',
                               '&:hover': {
-                                bgcolor: 'rgba(0,0,0,0.5)',
+                                bgcolor: 'rgba(0,0,0,0.7)',
                               },
                             }}
                             onClick={() => removeImage(index)}
@@ -369,19 +423,21 @@ const CreateListing = () => {
                       ))}
                     </Box>
                   )}
-                  
+
+                  {/* Image Upload Error */}
                   {uploadError && (
-                    <Alert severity="error" sx={{ mt: 1 }}>
+                    <Alert severity="warning" sx={{ mt: 1 }}>
                       {uploadError}
                     </Alert>
                   )}
                 </Grid>
-                
+
+                {/* Action Buttons */}
                 <Grid item xs={12}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
                     <Button
                       variant="outlined"
-                      color="primary"
+                      color="secondary" // Changed to secondary for differentiation
                       onClick={() => navigate(-1)}
                       disabled={loading || isSubmitting}
                     >
@@ -391,9 +447,9 @@ const CreateListing = () => {
                       type="submit"
                       variant="contained"
                       color="primary"
-                      disabled={loading || isSubmitting || uploadingImage}
+                      disabled={loading || isSubmitting || uploadingImage || uploadedImages.length === 0}
                     >
-                      {loading || isSubmitting ? <CircularProgress size={24} /> : 'List Product'}
+                      {loading || isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'List Product'}
                     </Button>
                   </Box>
                 </Grid>
