@@ -14,15 +14,15 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'SecondMarket/earbuds', // Cloudinary folder name
-    format: async (req, file) => 'jpg', // supports promises as well
+    folder: 'SecondMarket/earbuds',
+    format: async (req, file) => 'jpg',
     public_id: (req, file) => {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       return `earbud-${uniqueSuffix}`;
     },
     transformation: [
-      { width: 800, height: 600, crop: 'limit' }, // Resize images
-      { quality: 'auto' } // Auto quality optimization
+      { width: 800, height: 600, crop: 'limit' },
+      { quality: 'auto' }
     ]
   },
 });
@@ -41,7 +41,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 5 * 1024 * 1024
   }
 });
 
@@ -50,12 +50,12 @@ export const uploadToCloudinary = async (buffer, options = {}) => {
   return new Promise((resolve, reject) => {
     const b64 = Buffer.from(buffer).toString('base64');
     const dataURI = `data:image/jpeg;base64,${b64}`;
-    
+
     const uploadOptions = {
       folder: 'SecondMarket',
       ...options
     };
-    
+
     cloudinary.uploader.upload(dataURI, uploadOptions, (error, result) => {
       if (error) return reject(error);
       resolve(result);
@@ -74,7 +74,8 @@ export const deleteFile = async (publicId) => {
   }
 };
 
-export const uploadToCloudinary = async (fileBuffer, baseName = 'image') => {
+// Function to upload image in multiple sizes
+export const uploadMultipleSizes = async (fileBuffer, baseName = 'image') => {
   const sizes = [
     { name: 'thumbnail', width: 150 },
     { name: 'medium', width: 600 },
@@ -90,21 +91,6 @@ export const uploadToCloudinary = async (fileBuffer, baseName = 'image') => {
       .toBuffer();
 
     const uniqueId = `${baseName}-${size.name}-${Date.now()}`;
-    const uploaded = await cloudinary.uploader.upload_stream(
-      {
-        folder: 'SecondMarket/earbuds',
-        format: 'webp',
-        public_id: uniqueId,
-        resource_type: 'image',
-      },
-      (error, result) => {
-        if (error) {
-          console.error('Upload error:', error);
-          throw error;
-        }
-        return result;
-      }
-    );
 
     const uploadedPromise = new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
@@ -112,12 +98,17 @@ export const uploadToCloudinary = async (fileBuffer, baseName = 'image') => {
           folder: 'SecondMarket/earbuds',
           format: 'webp',
           public_id: uniqueId,
+          resource_type: 'image',
         },
         (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result);
+          }
         }
       );
+
       stream.end(resizedBuffer);
     });
 
